@@ -1,0 +1,6 @@
+@import 'custom.css';
+
+@import 'tailwindcss/base';
+/* @tailwind directives are processed by PostCSS */
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
