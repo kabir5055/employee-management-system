@@ -3,9 +3,14 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PositionController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\PersonalInfoController;
+use App\Http\Controllers\EmployeePromotionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\Admin\UserPermissionController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductDeliveryController;
@@ -17,15 +22,14 @@ use App\Http\Controllers\EmployeeStockController;
 use App\Http\Controllers\StockTransferController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -41,13 +45,31 @@ Route::middleware('auth')->group(function () {
     Route::post('employees/export', [EmployeeController::class, 'export'])->name('employees.export');
     Route::post('employees/import', [EmployeeController::class, 'import'])->name('employees.import');
 
+    // Employee Management Sub-modules
+    Route::resource('positions', PositionController::class);
+    Route::resource('departments', DepartmentController::class);
+    Route::resource('personal-info', PersonalInfoController::class);
+
+    // Employee Promotion Routes
+    Route::resource('employee-promotions', EmployeePromotionController::class);
+    Route::get('employees/{employee}/promotion-history', [EmployeePromotionController::class, 'employeeHistory'])
+        ->name('employees.promotion-history');
+
     // Role & Permission Routes - Super Admin only (controlled in controller)
     Route::resource('roles', RoleController::class);
     Route::resource('permissions', PermissionController::class);
     Route::get('admin/user-permissions', [UserPermissionController::class, 'index'])->name('admin.user-permissions');
     Route::patch('admin/users/{user}/permissions', [UserPermissionController::class, 'updatePermissions'])->name('admin.users.update-permissions');
+
+    // User Management Routes - Super Admin only
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::resource('users', UserController::class);
+        Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::patch('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+    });
+
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('/settings/update', [SettingController::class, 'update'])->name('settings.update');
 
     // Balance Sheet Routes - View employee financial positions
     Route::get('balance-sheets', [BalanceSheetController::class, 'index'])->name('balance-sheets.index');

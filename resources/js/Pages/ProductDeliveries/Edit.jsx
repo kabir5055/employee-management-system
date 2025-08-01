@@ -15,7 +15,7 @@ export default function Edit({ auth, delivery, products, employees }) {
         product_id: delivery.product_id || '',
         quantity: delivery.quantity || '',
         unit_price: delivery.unit_price || '',
-        delivery_date: delivery.delivery_date ? delivery.delivery_date.split('T')[0] : '',
+        delivery_date: delivery.delivery_date ? new Date(delivery.delivery_date).toISOString().split('T')[0] : '',
         notes: delivery.notes || '',
         status: delivery.status || 'pending'
     });
@@ -38,7 +38,7 @@ export default function Edit({ auth, delivery, products, employees }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        put(`/product-deliveries/${delivery.id}`);
+        put(route('product-deliveries.update', { product_delivery: delivery.id }));
     };
 
     return (

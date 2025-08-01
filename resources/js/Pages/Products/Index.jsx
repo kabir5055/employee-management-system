@@ -18,7 +18,7 @@ export default function Index({ auth, products }) {
 
     const deleteProduct = (product) => {
         if (confirm('Are you sure you want to delete this product?')) {
-            destroy(route('products.destroy', product.id));
+            destroy(route('products.destroy', { product: product.id }));
         }
     };
 
@@ -99,7 +99,7 @@ export default function Index({ auth, products }) {
                                                 <td className="py-3 px-4 border-b text-sm font-medium">
                                                     <div className="flex space-x-3">
                                                         <Link
-                                                            href={route('products.edit', product.id)}
+                                                            href={route('products.edit', { product: product.id })}
                                                             className="text-blue-600 hover:text-blue-900 inline-flex items-center"
                                                         >
                                                             <PencilIcon className="w-4 h-4 mr-1" />

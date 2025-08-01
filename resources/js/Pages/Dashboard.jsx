@@ -16,7 +16,7 @@ import {
     CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip as ChartTooltip, Legend as ChartLegend, ArcElement } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip as ChartTooltip, Legend as ChartLegend, ArcElement, Filler } from 'chart.js';
 import { Line as ChartJSLine, Bar as ChartJSBar, Doughnut } from 'react-chartjs-2';
 
 // Register Chart.js components
@@ -29,7 +29,8 @@ ChartJS.register(
     Title,
     ChartTooltip,
     ChartLegend,
-    ArcElement
+    ArcElement,
+    Filler
 );
 
 export default function Dashboard({ auth, stats, monthlySalesData, topProductsData, topEmployees, recentDeliveries }) {

@@ -22,10 +22,6 @@ export default function CreateEmployee({ auth, departments, positions }) {
         post(route('employees.store'));
     };
 
-    const filteredPositions = positions.filter(position =>
-        position.department_id == data.department_id
-    );
-
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -158,8 +154,10 @@ export default function CreateEmployee({ auth, departments, positions }) {
                                             required
                                         >
                                             <option value="">Select Position</option>
-                                            {filteredPositions.map((position) => (
-                                                <option key={position.id} value={position.id}>{position.title}</option>
+                                            {positions.map((position) => (
+                                                <option key={position.id} value={position.id}>
+                                                    {position.name} ({position.level})
+                                                </option>
                                             ))}
                                         </select>
                                         {errors.position_id && <p className="mt-1 text-sm text-red-600">{errors.position_id}</p>}

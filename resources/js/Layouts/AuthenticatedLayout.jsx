@@ -4,6 +4,8 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
+import { useFlashMessages } from '@/hooks/useFlashMessages';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import {
     HomeIcon,
     UserGroupIcon,
@@ -22,7 +24,11 @@ import {
     ArrowTrendingUpIcon,
     DocumentArrowUpIcon,
     UsersIcon,
-    KeyIcon
+    KeyIcon,
+    BriefcaseIcon,
+    UserIcon,
+    IdentificationIcon,
+    TrophyIcon
 } from '@heroicons/react/24/outline';
 
 export default function AuthenticatedLayout({ user, header, children }) {
@@ -30,6 +36,12 @@ export default function AuthenticatedLayout({ user, header, children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const { url } = usePage();
+
+    // Handle flash messages with toasts
+    useFlashMessages();
+
+    // Handle form validation errors with toasts
+    useFormErrors();
 
     // Helper function to check if user is super admin
     const isSuperAdmin = () => {
@@ -52,6 +64,22 @@ export default function AuthenticatedLayout({ user, header, children }) {
             return currentPath.startsWith('/products');
         }
 
+        if (routeName === 'positions.*') {
+            return currentPath.startsWith('/positions');
+        }
+
+        if (routeName === 'departments.*') {
+            return currentPath.startsWith('/departments');
+        }
+
+        if (routeName === 'personal-info.*') {
+            return currentPath.startsWith('/personal-info');
+        }
+
+        if (routeName === 'employee-promotions.*') {
+            return currentPath.startsWith('/employee-promotions');
+        }
+
         if (routeName === 'product-deliveries.*') {
             return currentPath.startsWith('/product-deliveries');
         }
@@ -70,6 +98,10 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
         if (routeName === 'admin.*') {
             return currentPath.startsWith('/admin');
+        }
+
+        if (routeName === 'admin.users.*') {
+            return currentPath.startsWith('/admin/users');
         }
 
         if (routeName === 'roles.*') {
@@ -109,6 +141,30 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     href: route('employees.index'),
                     icon: UserGroupIcon,
                     current: isCurrentRoute('employees.*')
+                },
+                {
+                    name: 'Departments',
+                    href: route('departments.index'),
+                    icon: BuildingOfficeIcon,
+                    current: isCurrentRoute('departments.*')
+                },
+                {
+                    name: 'Positions',
+                    href: route('positions.index'),
+                    icon: BriefcaseIcon,
+                    current: isCurrentRoute('positions.*')
+                },
+                {
+                    name: 'Personal Information',
+                    href: route('personal-info.index'),
+                    icon: IdentificationIcon,
+                    current: isCurrentRoute('personal-info.*')
+                },
+                {
+                    name: 'Promotion History',
+                    href: route('employee-promotions.index'),
+                    icon: TrophyIcon,
+                    current: isCurrentRoute('employee-promotions.*')
                 },
             ]
         },
@@ -151,28 +207,19 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     current: isCurrentRoute('reports.*')
                 },
             ]
-        },
-        // Admin section - only for super admin
-        ...(isSuperAdmin() ? [{
+        }
+    ];
+
+    // Add admin section if user is super admin
+    if (isSuperAdmin()) {
+        navigationSections.push({
             title: 'Administration',
             items: [
                 {
                     name: 'User Management',
-                    href: route('admin.user-permissions'),
+                    href: route('admin.users.index'),
                     icon: UsersIcon,
-                    current: isCurrentRoute('admin.*')
-                },
-                {
-                    name: 'Roles',
-                    href: route('roles.index'),
-                    icon: ShieldCheckIcon,
-                    current: isCurrentRoute('roles.*')
-                },
-                {
-                    name: 'Permissions',
-                    href: route('permissions.index'),
-                    icon: KeyIcon,
-                    current: isCurrentRoute('permissions.*')
+                    current: isCurrentRoute('admin.users.*')
                 },
                 {
                     name: 'Settings',
@@ -181,8 +228,8 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     current: isCurrentRoute('settings.*')
                 },
             ]
-        }] : [])
-    ];
+        });
+    }
 
     // No filtering needed - just use the sections as-is
     const filteredNavigation = navigationSections;

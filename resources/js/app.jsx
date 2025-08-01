@@ -4,6 +4,7 @@ import '../css/app.css';
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { Toaster } from 'react-hot-toast';
 
 // Set up a comprehensive route function without Ziggy
 window.route = function(name, params = {}) {
@@ -12,10 +13,22 @@ window.route = function(name, params = {}) {
         'dashboard': '/dashboard',
         'employees.index': '/employees',
         'employees.create': '/employees/create',
-        'employees.show': '/employees/{id}',
-        'employees.edit': '/employees/{id}/edit',
+        'employees.show': '/employees/{employee}',
+        'employees.edit': '/employees/{employee}/edit',
+        'employees.store': '/employees',
+        'employees.update': '/employees/{employee}',
+        'employees.destroy': '/employees/{employee}',
         'employees.export': '/employees/export',
         'employees.import': '/employees/import',
+        'employees.personal-info': '/employees/{employee}/personal-info',
+        'employees.update-personal-info': '/employees/{employee}/personal-info',
+        'personal-info.index': '/personal-info',
+        'personal-info.create': '/personal-info/create',
+        'personal-info.show': '/personal-info/{personal_info}',
+        'personal-info.edit': '/personal-info/{personal_info}/edit',
+        'personal-info.store': '/personal-info',
+        'personal-info.update': '/personal-info/{personal_info}',
+        'personal-info.destroy': '/personal-info/{personal_info}',
         'profile.edit': '/profile',
         'logout': '/logout',
         'balance-sheets.index': '/balance-sheets',
@@ -23,21 +36,42 @@ window.route = function(name, params = {}) {
         'balance-sheets.update-balance': '/balance-sheets/{employee}/update-balance',
         'products.index': '/products',
         'products.create': '/products/create',
-        'products.show': '/products/{id}',
-        'products.edit': '/products/{id}/edit',
+        'products.show': '/products/{product}',
+        'products.edit': '/products/{product}/edit',
+        'products.store': '/products',
+        'products.update': '/products/{product}',
+        'products.destroy': '/products/{product}',
         'products.update-stock': '/products/{product}/update-stock',
         'product-deliveries.index': '/product-deliveries',
         'product-deliveries.create': '/product-deliveries/create',
-        'product-deliveries.show': '/product-deliveries/{id}',
-        'product-deliveries.edit': '/product-deliveries/{id}/edit',
+        'product-deliveries.show': '/product-deliveries/{product_delivery}',
+        'product-deliveries.edit': '/product-deliveries/{product_delivery}/edit',
+        'product-deliveries.store': '/product-deliveries',
+        'product-deliveries.update': '/product-deliveries/{product_delivery}',
+        'product-deliveries.destroy': '/product-deliveries/{product_delivery}',
         'warehouses.index': '/warehouses',
         'warehouses.create': '/warehouses/create',
-        'warehouses.show': '/warehouses/{id}',
-        'warehouses.edit': '/warehouses/{id}/edit',
+        'warehouses.show': '/warehouses/{warehouse}',
+        'warehouses.edit': '/warehouses/{warehouse}/edit',
+        'warehouses.inventory.update': '/warehouses/{warehouse}/inventory',
+        'employee-stocks.index': '/employee-stocks',
+        'employee-stocks.show': '/employee-stocks/{employee}',
+        'employee-stocks.update': '/employee-stocks/{stock}',
+        'stock-transfers.index': '/stock-transfers',
+        'stock-transfers.create': '/stock-transfers/create',
+        'stock-transfers.show': '/stock-transfers/{stock_transfer}',
+        'stock-transfers.store': '/stock-transfers',
+        'stock-transfers.approve': '/stock-transfers/{transfer}/approve',
+        'stock-transfers.cancel': '/stock-transfers/{transfer}/cancel',
         'expenses.index': '/expenses',
         'expenses.create': '/expenses/create',
-        'expenses.show': '/expenses/{id}',
-        'expenses.edit': '/expenses/{id}/edit',
+        'expenses.show': '/expenses/{expense}',
+        'expenses.edit': '/expenses/{expense}/edit',
+        'expenses.store': '/expenses',
+        'expenses.update': '/expenses/{expense}',
+        'expenses.destroy': '/expenses/{expense}',
+        'expenses.approve': '/expenses/{expense}/approve',
+        'expenses.reject': '/expenses/{expense}/reject',
         'reports.index': '/reports',
         'reports.employee-balances': '/reports/employee-balances',
         'reports.delivery-stats': '/reports/delivery-stats',
@@ -47,14 +81,50 @@ window.route = function(name, params = {}) {
         'reports.top-performers': '/reports/top-performers',
         'roles.index': '/roles',
         'roles.create': '/roles/create',
-        'roles.show': '/roles/{id}',
-        'roles.edit': '/roles/{id}/edit',
+        'roles.show': '/roles/{role}',
+        'roles.edit': '/roles/{role}/edit',
+        'roles.store': '/roles',
+        'roles.update': '/roles/{role}',
+        'roles.destroy': '/roles/{role}',
         'permissions.index': '/permissions',
         'permissions.create': '/permissions/create',
-        'permissions.show': '/permissions/{id}',
-        'permissions.edit': '/permissions/{id}/edit',
+        'permissions.show': '/permissions/{permission}',
+        'permissions.edit': '/permissions/{permission}/edit',
+        'permissions.store': '/permissions',
+        'permissions.update': '/permissions/{permission}',
+        'permissions.destroy': '/permissions/{permission}',
         'settings.index': '/settings',
+        'employee-promotions.index': '/employee-promotions',
+        'employee-promotions.create': '/employee-promotions/create',
+        'employee-promotions.show': '/employee-promotions/{employee_promotion}',
+        'employee-promotions.edit': '/employee-promotions/{employee_promotion}/edit',
+        'employee-promotions.store': '/employee-promotions',
+        'employee-promotions.update': '/employee-promotions/{employee_promotion}',
+        'employee-promotions.destroy': '/employee-promotions/{employee_promotion}',
+        'positions.index': '/positions',
+        'positions.create': '/positions/create',
+        'positions.show': '/positions/{position}',
+        'positions.edit': '/positions/{position}/edit',
+        'positions.store': '/positions',
+        'positions.update': '/positions/{position}',
+        'positions.destroy': '/positions/{position}',
+        'departments.index': '/departments',
+        'departments.create': '/departments/create',
+        'departments.show': '/departments/{department}',
+        'departments.edit': '/departments/{department}/edit',
+        'departments.store': '/departments',
+        'departments.update': '/departments/{department}',
+        'departments.destroy': '/departments/{department}',
         'admin.user-permissions': '/admin/user-permissions',
+        'admin.users.index': '/admin/users',
+        'admin.users.create': '/admin/users/create',
+        'admin.users.store': '/admin/users',
+        'admin.users.show': '/admin/users/{user}',
+        'admin.users.edit': '/admin/users/{user}/edit',
+        'admin.users.update': '/admin/users/{user}',
+        'admin.users.destroy': '/admin/users/{user}',
+        'admin.users.toggle-status': '/admin/users/{user}/toggle-status',
+        'admin.users.reset-password': '/admin/users/{user}/reset-password',
         'admin.users.update-permissions': '/admin/users/{user}/permissions',
         // Auth routes
         'login': '/login',
@@ -75,8 +145,19 @@ window.route = function(name, params = {}) {
     // Handle parameter replacement
     if (params && typeof params === 'object') {
         Object.keys(params).forEach(key => {
+            // Handle both {key} and key parameter formats
             url = url.replace(`{${key}}`, params[key]);
+            url = url.replace(`:${key}`, params[key]);
         });
+    }
+
+    // Handle special cases for model binding
+    if (params) {
+        // Handle single parameter case
+        if (typeof params === 'string' || typeof params === 'number') {
+            // Replace the first parameter placeholder
+            url = url.replace(/\{[^}]+\}/, params);
+        }
     }
 
     return url;
@@ -94,12 +175,19 @@ window.route.current = function(routeName) {
         'product-deliveries.index': '/product-deliveries',
         'balance-sheets.index': '/balance-sheets',
         'warehouses.index': '/warehouses',
+        'employee-stocks.index': '/employee-stocks',
+        'stock-transfers.index': '/stock-transfers',
         'expenses.index': '/expenses',
         'reports.index': '/reports',
         'roles.index': '/roles',
         'permissions.index': '/permissions',
         'settings.index': '/settings',
-        'admin.user-permissions': '/admin/user-permissions'
+        'employee-promotions.index': '/employee-promotions',
+        'positions.index': '/positions',
+        'departments.index': '/departments',
+        'personal-info.index': '/personal-info',
+        'admin.user-permissions': '/admin/user-permissions',
+        'admin.users.index': '/admin/users'
     };
 
     if (exactMatches[routeName]) {
@@ -127,6 +215,14 @@ window.route.current = function(routeName) {
         return currentPath.startsWith('/warehouses');
     }
 
+    if (routeName === 'employee-stocks.*') {
+        return currentPath.startsWith('/employee-stocks');
+    }
+
+    if (routeName === 'stock-transfers.*') {
+        return currentPath.startsWith('/stock-transfers');
+    }
+
     if (routeName === 'expenses.*') {
         return currentPath.startsWith('/expenses');
     }
@@ -141,6 +237,22 @@ window.route.current = function(routeName) {
 
     if (routeName === 'permissions.*') {
         return currentPath.startsWith('/permissions');
+    }
+
+    if (routeName === 'employee-promotions.*') {
+        return currentPath.startsWith('/employee-promotions');
+    }
+
+    if (routeName === 'positions.*') {
+        return currentPath.startsWith('/positions');
+    }
+
+    if (routeName === 'departments.*') {
+        return currentPath.startsWith('/departments');
+    }
+
+    if (routeName === 'personal-info.*') {
+        return currentPath.startsWith('/personal-info');
     }
 
     if (routeName === 'settings.*') {
@@ -162,7 +274,37 @@ createInertiaApp({
     setup({ el, App, props }) {
         const root = createRoot(el);
 
-        root.render(<App {...props} />);
+        root.render(
+            <>
+                <App {...props} />
+                <Toaster
+                    position="top-right"
+                    toastOptions={{
+                        duration: 4000,
+                        style: {
+                            background: '#ffffff',
+                            color: '#374151',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0.5rem',
+                            padding: '16px',
+                        },
+                        success: {
+                            iconTheme: {
+                                primary: '#10b981',
+                                secondary: '#ffffff',
+                            },
+                        },
+                        error: {
+                            iconTheme: {
+                                primary: '#ef4444',
+                                secondary: '#ffffff',
+                            },
+                        },
+                    }}
+                />
+            </>
+        );
     },
     progress: {
         color: '#4F46E5',

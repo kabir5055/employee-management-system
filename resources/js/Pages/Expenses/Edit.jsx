@@ -9,7 +9,7 @@ export default function ExpensesEdit({ auth, expense, warehouses }) {
         amount: expense.amount || '',
         category: expense.category || '',
         description: expense.description || '',
-        expense_date: expense.expense_date || '',
+        expense_date: expense.expense_date ? new Date(expense.expense_date).toISOString().split('T')[0] : '',
         receipt_image: null
     });
 
@@ -17,9 +17,9 @@ export default function ExpensesEdit({ auth, expense, warehouses }) {
         e.preventDefault();
         console.log('Form data before submit:', data);
         console.log('Expense ID:', expense.id);
-        console.log('URL:', `/expenses/${expense.id}`);
+        console.log('Update route:', route('expenses.update', { expense: expense.id }));
 
-        put(`/expenses/${expense.id}`, data, {
+        put(route('expenses.update', { expense: expense.id }), data, {
             forceFormData: true,
             onSuccess: (response) => {
                 console.log('Update successful:', response);
@@ -73,7 +73,7 @@ export default function ExpensesEdit({ auth, expense, warehouses }) {
                                 </div>
                                 <div className="flex items-center space-x-3">
                                     <Link
-                                        href={route('expenses.show', expense.id)}
+                                        href={route('expenses.show', { expense: expense.id })}
                                         className="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
                                     >
                                         View Details

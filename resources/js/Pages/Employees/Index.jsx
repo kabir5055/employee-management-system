@@ -61,7 +61,7 @@ export default function EmployeesIndex({ auth, employees, departments, filters }
 
     const handleDelete = (id) => {
         if (confirm('Are you sure you want to delete this employee?')) {
-            router.delete(route('employees.destroy', id));
+            router.delete(route('employees.destroy', { employee: id }));
         }
     };
 
@@ -249,13 +249,13 @@ export default function EmployeesIndex({ auth, employees, departments, filters }
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex space-x-2">
                                                     <Link
-                                                        href={route('employees.show', employee.id)}
+                                                        href={route('employees.show', { employee: employee.id })}
                                                         className="text-blue-600 hover:text-blue-900"
                                                     >
                                                         <EyeIcon className="h-4 w-4" />
                                                     </Link>
                                                     <Link
-                                                        href={route('employees.edit', employee.id)}
+                                                        href={route('employees.edit', { employee: employee.id })}
                                                         className="text-yellow-600 hover:text-yellow-900"
                                                     >
                                                         <PencilIcon className="h-4 w-4" />

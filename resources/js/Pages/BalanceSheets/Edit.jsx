@@ -11,9 +11,9 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function Edit({ auth, balanceSheet, employees, canViewAllEmployees }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         employee_id: balanceSheet.employee_id || '',
-        date: balanceSheet.date || '',
+        date: balanceSheet.date ? new Date(balanceSheet.date).toISOString().split('T')[0] : '',
         location: balanceSheet.location || '',
         product_delivery_amount: balanceSheet.product_delivery_amount || '',
         expense_amount: balanceSheet.expense_amount || '',
@@ -24,7 +24,7 @@ export default function Edit({ auth, balanceSheet, employees, canViewAllEmployee
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        put(`/balance-sheets/${balanceSheet.id}`);
+        post(route('balance-sheets.update-balance', { employee: balanceSheet.employee_id }));
     };
 
     const calculateTotals = () => {

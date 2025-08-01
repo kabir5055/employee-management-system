@@ -19,7 +19,8 @@ class Product extends Model
         'status',
         'commission_rate',
         'minimum_quantity',
-        'maximum_quantity'
+        'maximum_quantity',
+        'image_path'
     ];
 
     protected $attributes = [

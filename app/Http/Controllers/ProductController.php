@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -30,13 +31,32 @@ class ProductController extends Controller
             'cost_price' => 'required|numeric|min:0',
             'stock_quantity' => 'required|integer|min:0',
             'sku' => 'required|string|unique:products',
-            'status' => 'required|in:active,inactive'
+            'status' => 'required|in:active,inactive',
+            'image' => 'nullable|image|max:2048', // 2MB max
         ]);
 
-        Product::create($validated);
+        try {
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('products', 'public');
+                $validated['image_path'] = $imagePath;
+            }
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product created successfully');
+            Product::create($validated);
+
+            return redirect()->route('products.index')
+                ->with('success', 'Product created successfully');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Error creating product: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    public function show(Product $product)
+    {
+        return Inertia::render('Products/Show', [
+            'product' => $product
+        ]);
     }
 
     public function edit(Product $product)
@@ -55,19 +75,46 @@ class ProductController extends Controller
             'cost_price' => 'required|numeric|min:0',
             'stock_quantity' => 'required|integer|min:0',
             'sku' => 'required|string|unique:products,sku,' . $product->id,
-            'status' => 'required|in:active,inactive'
+            'status' => 'required|in:active,inactive',
+            'image' => 'nullable|image|max:2048', // 2MB max
         ]);
 
-        $product->update($validated);
+        try {
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                // Delete old image if exists
+                if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                    Storage::disk('public')->delete($product->image_path);
+                }
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product updated successfully');
+                // Store new image
+                $imagePath = $request->file('image')->store('products', 'public');
+                $validated['image_path'] = $imagePath;
+            }
+
+            $product->update($validated);
+
+            return redirect()->route('products.index')
+                ->with('success', 'Product updated successfully');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Error updating product: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
 
     public function destroy(Product $product)
     {
-        $product->delete();
-        return redirect()->route('products.index')
-            ->with('success', 'Product deleted successfully');
+        try {
+            // Delete image if exists
+            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                Storage::disk('public')->delete($product->image_path);
+            }
+
+            $product->delete();
+            return redirect()->route('products.index')
+                ->with('success', 'Product deleted successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error deleting product: ' . $e->getMessage());
+        }
     }
 }

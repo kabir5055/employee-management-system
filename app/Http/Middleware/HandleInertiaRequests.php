@@ -37,6 +37,23 @@ class HandleInertiaRequests extends Middleware
                     'is_super_admin' => $request->user()->is_super_admin ?? false,
                 ] : null,
             ],
+            'settings' => $this->getPublicSettings(),
         ];
+    }
+
+    /**
+     * Get public settings for sharing with frontend
+     */
+    private function getPublicSettings(): array
+    {
+        try {
+            return \App\Models\Setting::where('is_public', true)
+                ->get()
+                ->keyBy('key')
+                ->map(fn($setting) => $setting->value)
+                ->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 }

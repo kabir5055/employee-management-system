@@ -16,11 +16,13 @@ class Setting extends Model
         'type',
         'group',
         'label',
-        'is_public'
+        'is_public',
+        'options'
     ];
 
     protected $casts = [
         'is_public' => 'boolean',
+        'options' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

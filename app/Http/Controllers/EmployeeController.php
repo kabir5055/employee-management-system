@@ -106,8 +106,8 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        $departments = Department::all();
-        $positions = Position::with('department')->get();
+        $departments = Department::active()->get();
+        $positions = Position::active()->get();
 
         return Inertia::render('Employees/Create', [
             'departments' => $departments,
@@ -131,49 +131,68 @@ class EmployeeController extends Controller
             'role' => 'required|in:admin,hr,employee',
         ]);
 
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make('password123'),
-            'employee_id' => $request->employee_id,
-            'phone' => $request->phone,
-            'address' => $request->address,
-            'date_of_birth' => $request->date_of_birth,
-            'joining_date' => $request->joining_date,
-            'department_id' => $request->department_id,
-            'position_id' => $request->position_id,
-            'current_salary' => $request->current_salary,
-            'role' => $request->role,
-            'status' => 'active',
-        ]);
+        try {
+            User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make('password123'),
+                'employee_id' => $request->employee_id,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'date_of_birth' => $request->date_of_birth,
+                'joining_date' => $request->joining_date,
+                'department_id' => $request->department_id,
+                'position_id' => $request->position_id,
+                'current_salary' => $request->current_salary,
+                'role' => $request->role,
+                'status' => 'active',
+            ]);
 
-        return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
+            return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error creating employee: ' . $e->getMessage())->withInput();
+        }
     }
 
-    public function show($id)
+    public function show(User $employee)
     {
-        $employee = User::with([
+        $employee->load([
             'department',
             'position',
-            'salaryStructures',
+            'district',
+            'upazila',
+            'thana',
+            'promotions' => function($query) {
+                $query->with(['previousPosition', 'newPosition'])
+                      ->orderBy('effective_date', 'desc');
+            },
+            'salaryStructures' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            },
             'attendance' => function($query) {
                 $query->orderBy('date', 'desc')->take(30);
             },
             'productDeliveries.product',
-            'collections',
-            'expenses'
-        ])->findOrFail($id);
+            'collections' => function($query) {
+                $query->orderBy('created_at', 'desc')->take(10);
+            },
+            'expenses' => function($query) {
+                $query->orderBy('created_at', 'desc')->take(10);
+            },
+            'balanceSheets' => function($query) {
+                $query->orderBy('created_at', 'desc')->take(5);
+            }
+        ]);
 
         return Inertia::render('Employees/Show', [
             'employee' => $employee,
         ]);
     }
 
-    public function edit($id)
+    public function edit(User $employee)
     {
-        $employee = User::findOrFail($id);
         $departments = Department::all();
-        $positions = Position::with('department')->get();
+        $positions = Position::all();
 
         return Inertia::render('Employees/Edit', [
             'employee' => $employee,
@@ -182,35 +201,52 @@ class EmployeeController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, User $employee)
     {
-        $employee = User::findOrFail($id);
-
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'employee_id' => 'required|string|unique:users,employee_id,' . $id,
+            'email' => 'required|email|unique:users,email,' . $employee->id,
+            'employee_id' => 'required|string|unique:users,employee_id,' . $employee->id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'date_of_birth' => 'nullable|date',
-            'joining_date' => 'required|date',
+            'hire_date' => 'nullable|date',
             'department_id' => 'required|exists:departments,id',
             'position_id' => 'required|exists:positions,id',
-            'current_salary' => 'required|numeric|min:0',
-            'role' => 'required|in:admin,hr,employee',
+            'salary' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,inactive',
+            'emergency_contact' => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
-        $employee->update($request->all());
-
-        return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');
+        try {
+            $employee->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'employee_id' => $request->employee_id,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'joining_date' => $request->hire_date,
+                'department_id' => $request->department_id,
+                'position_id' => $request->position_id,
+                'current_salary' => $request->salary,
+                'status' => $request->status,
+                'emergency_contact' => $request->emergency_contact,
+                'notes' => $request->notes,
+            ]);
+            return redirect()->route('employees.show', ['employee' => $employee->id])
+                ->with('success', 'Employee updated successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error updating employee: ' . $e->getMessage())->withInput();
+        }
     }
 
-    public function destroy($id)
+    public function destroy(User $employee)
     {
-        $employee = User::findOrFail($id);
-        $employee->delete();
-
-        return redirect()->route('employees.index')->with('success', 'Employee deleted successfully.');
+        try {
+            $employee->delete();
+            return redirect()->route('employees.index')->with('success', 'Employee deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error deleting employee: ' . $e->getMessage());
+        }
     }
 }
