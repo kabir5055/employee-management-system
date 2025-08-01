@@ -13,12 +13,49 @@ export default function EmployeesIndex({ auth, employees, departments, filters }
     const [search, setSearch] = useState(filters.search || '');
     const [department, setDepartment] = useState(filters.department || '');
     const [status, setStatus] = useState(filters.status || '');
+    const [isLoading, setIsLoading] = useState(false);
+    const [filterErrors, setFilterErrors] = useState({});
 
     const handleSearch = () => {
-        router.get(route('employees.index'), {
-            search,
-            department,
-            status,
+        try {
+            setIsLoading(true);
+            setFilterErrors({});
+
+            // Build query parameters - only include non-empty values
+            const params = {};
+            if (search.trim()) params.search = search.trim();
+            if (department) params.department = department;
+            if (status) params.status = status;
+
+            router.get(route('employees.index'), params, {
+                onSuccess: () => {
+                    setIsLoading(false);
+                },
+                onError: (errors) => {
+                    setFilterErrors(errors);
+                    setIsLoading(false);
+                },
+                onFinish: () => {
+                    setIsLoading(false);
+                }
+            });
+        } catch (error) {
+            console.error('Error applying filter:', error);
+            setFilterErrors({ general: 'An error occurred while applying the filter' });
+            setIsLoading(false);
+        }
+    };
+
+    const clearFilters = () => {
+        setSearch('');
+        setDepartment('');
+        setStatus('');
+        setFilterErrors({});
+
+        router.get(route('employees.index'), {}, {
+            onSuccess: () => {
+                setIsLoading(false);
+            }
         });
     };
 
@@ -52,48 +89,101 @@ export default function EmployeesIndex({ auth, employees, departments, filters }
                             </div>
 
                             {/* Filters */}
-                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
-                                <div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search employees..."
-                                        value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                            <div className="mt-6">
+                                {/* Show general error */}
+                                {filterErrors.general && (
+                                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                                        <p className="text-red-800 text-sm">{filterErrors.general}</p>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                    <div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search employees... (optional)"
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                    <div>
+                                        <select
+                                            value={department}
+                                            onChange={(e) => setDepartment(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            disabled={isLoading}
+                                        >
+                                            <option value="">All Departments</option>
+                                            {departments.map((dept) => (
+                                                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <select
+                                            value={status}
+                                            onChange={(e) => setStatus(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            disabled={isLoading}
+                                        >
+                                            <option value="">All Status</option>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleSearch}
+                                            disabled={isLoading}
+                                            className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isLoading ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                                                    Searching...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <MagnifyingGlassIcon className="h-4 w-4 mr-2" />
+                                                    Search
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={clearFilters}
+                                            disabled={isLoading}
+                                            className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <select
-                                        value={department}
-                                        onChange={(e) => setDepartment(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="">All Departments</option>
-                                        {departments.map((dept) => (
-                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <select
-                                        value={status}
-                                        onChange={(e) => setStatus(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="">All Status</option>
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <button
-                                        onClick={handleSearch}
-                                        className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                                    >
-                                        <MagnifyingGlassIcon className="h-4 w-4 mr-2" />
-                                        Search
-                                    </button>
-                                </div>
+
+                                {/* Active filter indicators */}
+                                {(search || department || status) && (
+                                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                        <p className="text-blue-800 text-sm font-medium">Active Filters:</p>
+                                        <div className="mt-1 flex flex-wrap gap-2">
+                                            {search && (
+                                                <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                                    Search: {search}
+                                                </span>
+                                            )}
+                                            {department && (
+                                                <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                                    Department: {departments.find(d => d.id == department)?.name || 'Selected'}
+                                                </span>
+                                            )}
+                                            {status && (
+                                                <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                                    Status: {status}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

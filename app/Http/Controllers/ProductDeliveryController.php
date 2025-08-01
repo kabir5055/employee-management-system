@@ -24,8 +24,11 @@ class ProductDeliveryController extends Controller
     public function create()
     {
         $products = Product::all();
+        $employees = \App\Models\User::with('position')->where('status', 'active')->get();
+
         return Inertia::render('ProductDeliveries/Create', [
-            'products' => $products
+            'products' => $products,
+            'employees' => $employees
         ]);
     }
 
@@ -80,10 +83,12 @@ class ProductDeliveryController extends Controller
     {
         $productDelivery->load(['employee', 'product']);
         $products = Product::all();
+        $employees = \App\Models\User::with('position')->where('status', 'active')->get();
 
         return Inertia::render('ProductDeliveries/Edit', [
             'delivery' => $productDelivery,
-            'products' => $products
+            'products' => $products,
+            'employees' => $employees
         ]);
     }
 

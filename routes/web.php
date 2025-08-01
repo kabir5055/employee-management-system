@@ -41,26 +41,20 @@ Route::middleware('auth')->group(function () {
     Route::post('employees/export', [EmployeeController::class, 'export'])->name('employees.export');
     Route::post('employees/import', [EmployeeController::class, 'import'])->name('employees.import');
 
-    // Role & Permission Routes
-    Route::middleware('role:super-admin')->group(function () {
-        Route::resource('roles', RoleController::class);
-        Route::resource('permissions', PermissionController::class);
+    // Role & Permission Routes - Super Admin only (controlled in controller)
+    Route::resource('roles', RoleController::class);
+    Route::resource('permissions', PermissionController::class);
+    Route::get('admin/user-permissions', [UserPermissionController::class, 'index'])->name('admin.user-permissions');
+    Route::patch('admin/users/{user}/permissions', [UserPermissionController::class, 'updatePermissions'])->name('admin.users.update-permissions');
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
 
-        // User Permission Management
-        Route::get('admin/user-permissions', [UserPermissionController::class, 'index'])->name('admin.user-permissions');
-        Route::patch('admin/users/{user}/permissions', [UserPermissionController::class, 'updatePermissions'])->name('admin.users.update-permissions');
-
-        // Settings Routes
-        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-        Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-    });
-
-    // Balance Sheet Routes
+    // Balance Sheet Routes - View employee financial positions
     Route::get('balance-sheets', [BalanceSheetController::class, 'index'])->name('balance-sheets.index');
     Route::get('balance-sheets/{employee}', [BalanceSheetController::class, 'show'])->name('balance-sheets.show');
+    Route::get('balance-sheets/export', [BalanceSheetController::class, 'export'])->name('balance-sheets.export');
     Route::post('balance-sheets/{employee}/update-balance', [BalanceSheetController::class, 'updateBalance'])
-        ->name('balance-sheets.update-balance')
-        ->middleware('role:admin,manager');
+        ->name('balance-sheets.update-balance');
 
     // Employee Stock Routes
     Route::get('employee-stocks', [EmployeeStockController::class, 'index'])->name('employee-stocks.index');
@@ -73,15 +67,12 @@ Route::middleware('auth')->group(function () {
     Route::post('stock-transfers/{transfer}/cancel', [StockTransferController::class, 'cancel'])->name('stock-transfers.cancel');
 
     // Product Routes
-    Route::middleware('role:admin,manager')->group(function () {
-        Route::resource('products', ProductController::class);
-        Route::post('products/{product}/update-stock', [ProductController::class, 'updateStock'])
-            ->name('products.update-stock');
-    });
+    Route::resource('products', ProductController::class);
+    Route::post('products/{product}/update-stock', [ProductController::class, 'updateStock'])
+        ->name('products.update-stock');
 
     // Product Delivery Routes
-    Route::resource('product-deliveries', ProductDeliveryController::class)
-        ->middleware('role:admin,manager,employee');
+    Route::resource('product-deliveries', ProductDeliveryController::class);
 
     // Warehouse Routes
     Route::resource('warehouses', WarehouseController::class);
@@ -89,20 +80,18 @@ Route::middleware('auth')->group(function () {
         ->name('warehouses.inventory.update');
 
     // Expense Routes
-    Route::middleware('role:admin,manager,employee')->group(function () {
-        Route::resource('expenses', ExpenseController::class);
-    });
+    Route::resource('expenses', ExpenseController::class);
+    Route::post('expenses/{expense}/approve', [ExpenseController::class, 'approve'])->name('expenses.approve');
+    Route::post('expenses/{expense}/reject', [ExpenseController::class, 'reject'])->name('expenses.reject');
 
     // Report Routes
-    Route::middleware('role:admin,manager')->group(function () {
-        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-        Route::get('/reports/employee-balances', [ReportController::class, 'employeeBalances'])->name('reports.employee-balances');
-        Route::get('/reports/delivery-stats', [ReportController::class, 'deliveryStats'])->name('reports.delivery-stats');
-        Route::get('/reports/product-performance', [ReportController::class, 'productPerformance'])->name('reports.product-performance');
-        Route::get('/reports/yearly-comparison', [ReportController::class, 'yearlyComparison'])->name('reports.yearly-comparison');
-        Route::get('/reports/monthly-trends', [ReportController::class, 'monthlyTrends'])->name('reports.monthly-trends');
-        Route::get('/reports/top-performers', [ReportController::class, 'topPerformers'])->name('reports.top-performers');
-    });
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/employee-balances', [ReportController::class, 'employeeBalances'])->name('reports.employee-balances');
+    Route::get('/reports/delivery-stats', [ReportController::class, 'deliveryStats'])->name('reports.delivery-stats');
+    Route::get('/reports/product-performance', [ReportController::class, 'productPerformance'])->name('reports.product-performance');
+    Route::get('/reports/yearly-comparison', [ReportController::class, 'yearlyComparison'])->name('reports.yearly-comparison');
+    Route::get('/reports/monthly-trends', [ReportController::class, 'monthlyTrends'])->name('reports.monthly-trends');
+    Route::get('/reports/top-performers', [ReportController::class, 'topPerformers'])->name('reports.top-performers');
 });
 
 require __DIR__.'/auth.php';

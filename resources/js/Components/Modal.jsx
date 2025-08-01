@@ -1,4 +1,4 @@
-import { Dialog, Transition } from '@headlessui/react';
+import { Dialog, DialogPanel, Transition } from '@headlessui/react';
 export default function Modal({
     children,
     show = false,

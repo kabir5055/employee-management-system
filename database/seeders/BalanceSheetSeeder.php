@@ -11,27 +11,20 @@ class BalanceSheetSeeder extends Seeder
 {
     public function run()
     {
-        $employees = User::whereHas('roles', function($query) {
-            $query->where('name', 'employee');
-        })->get();
+        $employees = User::where('is_super_admin', false)->get();
 
         foreach ($employees as $employee) {
-            // Create balance sheets for the last 12 months
-            for ($i = 0; $i < 12; $i++) {
-                $date = Carbon::now()->subMonths($i);
+            // Create a balance sheet record for each employee
+            $openingBalance = rand(0, 10000);
+            $currentBalance = $openingBalance + rand(-5000, 15000);
 
-                BalanceSheet::create([
-                    'employee_id' => $employee->id,
-                    'month' => $date->month,
-                    'year' => $date->year,
-                    'opening_balance' => rand(0, 10000),
-                    'total_sales' => rand(5000, 50000),
-                    'total_collections' => rand(4000, 45000),
-                    'total_expenses' => rand(1000, 5000),
-                    'closing_balance' => rand(0, 15000),
-                    'notes' => 'Auto-generated balance sheet for ' . $date->format('F Y'),
-                ]);
-            }
+            BalanceSheet::create([
+                'employee_id' => $employee->id,
+                'opening_balance' => $openingBalance,
+                'current_balance' => $currentBalance,
+            ]);
         }
+
+        $this->command->info('Balance sheets created successfully!');
     }
 }

@@ -9,17 +9,16 @@ use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ExpenseController extends Controller
 {
     use AuthorizesRequests;
 
-    private function userHasRole($roles)
+    private function userIsSuperAdmin()
     {
-        $user = Auth::user();
-        $userRoles = $user->roles->pluck('name')->toArray();
-        return !empty(array_intersect($userRoles, (array)$roles));
+        return Auth::user()->is_super_admin ?? false;
     }
 
     public function index()
@@ -27,8 +26,8 @@ class ExpenseController extends Controller
         $user = Auth::user();
         $query = Expense::with(['employee', 'warehouse.thana.upazila.district']);
 
-        // If not admin/manager, only show expenses they're responsible for
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager'])) {
+        // If not super admin, only show expenses they're responsible for
+        if (!$this->userIsSuperAdmin()) {
             $query->where('employee_id', $user->id);
         }
 
@@ -44,7 +43,7 @@ class ExpenseController extends Controller
         $user = Auth::user();
         $warehouses = Warehouse::query()
             ->with(['thana.upazila.district'])
-            ->when(!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']), function ($query) use ($user) {
+            ->when(!$this->userIsSuperAdmin(), function ($query) use ($user) {
                 $query->where('employee_id', $user->id);
             })
             ->get();
@@ -69,7 +68,7 @@ class ExpenseController extends Controller
 
         // Verify user has access to this warehouse
         $warehouse = Warehouse::findOrFail($validated['warehouse_id']);
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']) && $warehouse->employee_id !== $user->id) {
+        if (!$this->userIsSuperAdmin() && $warehouse->employee_id !== $user->id) {
             abort(403);
         }
 
@@ -90,14 +89,14 @@ class ExpenseController extends Controller
 
         $balanceSheet->decrement('current_balance', (float)$expense->amount);
 
-        return redirect()->route('expenses.index')
+        return redirect('/expenses')
             ->with('success', 'Expense recorded successfully.');
     }
 
     public function show(Expense $expense)
     {
         // Check if user can view this expense
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']) && $expense->employee_id != Auth::id()) {
+        if (!$this->userIsSuperAdmin() && $expense->employee_id != Auth::id()) {
             abort(403, 'Unauthorized to view this expense');
         }
 
@@ -111,13 +110,13 @@ class ExpenseController extends Controller
     public function edit(Expense $expense)
     {
         // Check if user can edit this expense
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']) && $expense->employee_id != Auth::id()) {
+        if (!$this->userIsSuperAdmin() && $expense->employee_id != Auth::id()) {
             abort(403, 'Unauthorized to edit this expense');
         }
 
         $user = Auth::user();
         $warehouses = Warehouse::query()
-            ->when(!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']), function ($query) use ($user) {
+            ->when(!$this->userIsSuperAdmin(), function ($query) use ($user) {
                 $query->where('employee_id', $user->id);
             })
             ->with('thana.upazila.district')
@@ -132,7 +131,7 @@ class ExpenseController extends Controller
     public function update(Request $request, Expense $expense)
     {
         // Check if user can update this expense
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']) && $expense->employee_id != Auth::id()) {
+        if (!$this->userIsSuperAdmin() && $expense->employee_id != Auth::id()) {
             abort(403, 'Unauthorized to update this expense');
         }
 
@@ -149,7 +148,7 @@ class ExpenseController extends Controller
 
         // Verify user has access to this warehouse
         $warehouse = Warehouse::findOrFail($validated['warehouse_id']);
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']) && $warehouse->employee_id !== $user->id) {
+        if (!$this->userIsSuperAdmin() && $warehouse->employee_id !== $user->id) {
             abort(403);
         }
 
@@ -168,14 +167,14 @@ class ExpenseController extends Controller
 
         $expense->update($validated);
 
-        return redirect()->route('expenses.show', $expense)
+        return redirect("/expenses/{$expense->id}")
             ->with('success', 'Expense updated successfully.');
     }
 
     public function destroy(Expense $expense)
     {
         // Check if user can delete this expense
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']) && $expense->employee_id != Auth::id()) {
+        if (!$this->userIsSuperAdmin() && $expense->employee_id != Auth::id()) {
             abort(403, 'Unauthorized to delete this expense');
         }
 
@@ -187,7 +186,47 @@ class ExpenseController extends Controller
 
         $expense->delete();
 
-        return redirect()->route('expenses.index')
+        return redirect('/expenses')
             ->with('success', 'Expense deleted successfully.');
+    }
+
+    public function approve(Expense $expense)
+    {
+        // Check if user can approve expenses (only super admin)
+        if (!$this->userIsSuperAdmin()) {
+            abort(403, 'Unauthorized to approve expenses');
+        }
+
+        if ($expense->status === 'approved') {
+            return redirect()->back()->with('info', 'Expense is already approved.');
+        }
+
+        $expense->update(['status' => 'approved']);
+
+        return redirect()->back()->with('success', 'Expense approved successfully.');
+    }
+
+    public function reject(Expense $expense)
+    {
+        // Check if user can reject expenses (only super admin)
+        if (!$this->userIsSuperAdmin()) {
+            abort(403, 'Unauthorized to reject expenses');
+        }
+
+        if ($expense->status === 'rejected') {
+            return redirect()->back()->with('info', 'Expense is already rejected.');
+        }
+
+        // If the expense was previously approved, add back the amount to balance sheet
+        if ($expense->status === 'approved') {
+            $balanceSheet = BalanceSheet::where('employee_id', $expense->employee_id)->first();
+            if ($balanceSheet) {
+                $balanceSheet->increment('current_balance', (float)$expense->amount);
+            }
+        }
+
+        $expense->update(['status' => 'rejected']);
+
+        return redirect()->back()->with('success', 'Expense rejected successfully.');
     }
 }

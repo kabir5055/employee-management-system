@@ -13,7 +13,6 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
         "maatwebsite/excel": "*",
-        "spatie/laravel-permission": "^6.21",
         "tightenco/ziggy": "^2.5"
     },
     "require-dev": {

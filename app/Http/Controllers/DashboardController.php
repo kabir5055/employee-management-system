@@ -12,6 +12,7 @@ use App\Models\Collection;
 use App\Models\Expense;
 use App\Models\Product;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -53,19 +54,39 @@ class DashboardController extends Controller
                 SUM(total_amount) as total
             ')
             ->whereYear('delivery_date', $currentYear)
-            ->groupBy('year', 'month')
+            ->groupBy(DB::raw('YEAR(delivery_date)'), DB::raw('MONTH(delivery_date)'))
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
+
+        // Monthly expenses data for comparison
+        $monthlyExpenses = Expense::selectRaw('
+                MONTH(expense_date) as month,
+                YEAR(expense_date) as year,
+                SUM(amount) as total
+            ')
+            ->whereYear('expense_date', $currentYear)
+            ->groupBy(DB::raw('YEAR(expense_date)'), DB::raw('MONTH(expense_date)'))
             ->orderBy('year')
             ->orderBy('month')
             ->get();
 
         $monthlyLabels = [];
         $monthlyValues = [];
+        $monthlyExpenseValues = [];
         for ($i = 1; $i <= 12; $i++) {
-            $monthlyLabels[] = Carbon::create()->month($i)->format('F');
+            $monthlyLabels[] = Carbon::create()->month($i)->format('M');
+
             $monthValue = $monthlySales->first(function($sale) use ($i, $currentYear) {
                 return $sale->month == $i && $sale->year == $currentYear;
             });
+
+            $expenseValue = $monthlyExpenses->first(function($expense) use ($i, $currentYear) {
+                return $expense->month == $i && $expense->year == $currentYear;
+            });
+
             $monthlyValues[] = $monthValue ? $monthValue->total : 0;
+            $monthlyExpenseValues[] = $expenseValue ? $expenseValue->total : 0;
         }
 
         // Top products data
@@ -119,10 +140,17 @@ class DashboardController extends Controller
                 'totalProducts' => Product::count(),
                 'totalDeliveries' => ProductDelivery::count(),
                 'totalRevenue' => ProductDelivery::sum('total_amount'),
+                'activeEmployees' => $activeEmployees,
+                'totalPayroll' => $totalPayroll,
+                'totalCollections' => $totalCollections,
+                'totalExpenses' => Expense::sum('amount'),
+                'currentMonthRevenue' => $totalDeliveries,
+                'currentMonthExpenses' => $totalExpenses,
             ],
             'monthlySalesData' => [
                 'labels' => $monthlyLabels,
                 'values' => $monthlyValues,
+                'expenses' => $monthlyExpenseValues,
             ],
             'topProductsData' => [
                 'labels' => $topProducts->pluck('name'),
@@ -130,11 +158,6 @@ class DashboardController extends Controller
             ],
             'recentDeliveries' => $recentDeliveries,
             'topEmployees' => $topEmployees,
-            'activeEmployees' => $activeEmployees,
-            'totalPayroll' => $totalPayroll,
-            'totalDeliveries' => $totalDeliveries,
-            'totalCollections' => $totalCollections,
-            'totalExpenses' => $totalExpenses,
             'departments' => $departments,
             'recentEmployees' => $recentEmployees
         ]);

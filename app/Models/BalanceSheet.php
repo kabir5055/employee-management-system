@@ -17,9 +17,11 @@ class BalanceSheet extends Model
         'current_balance',
         'product_delivery_amount',
         'expense_amount',
+        'total_amount',
         'market_cost',
         'ta_da',
         'notes',
+        'created_by',
         'updated_by'
     ];
 
@@ -29,6 +31,7 @@ class BalanceSheet extends Model
         'current_balance' => 'decimal:2',
         'product_delivery_amount' => 'decimal:2',
         'expense_amount' => 'decimal:2',
+        'total_amount' => 'decimal:2',
         'market_cost' => 'decimal:2',
         'ta_da' => 'decimal:2'
     ];
@@ -51,6 +54,11 @@ class BalanceSheet extends Model
     public function updatedByUser()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function createdByUser()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function getTotalAmount()

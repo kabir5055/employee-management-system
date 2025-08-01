@@ -15,8 +15,24 @@ import {
     BuildingOfficeIcon,
     CalendarDaysIcon
 } from '@heroicons/react/24/outline';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip as ChartTooltip, Legend as ChartLegend, ArcElement } from 'chart.js';
+import { Line as ChartJSLine, Bar as ChartJSBar, Doughnut } from 'react-chartjs-2';
 
-export default function Dashboard({ auth, stats, monthlySalesData, topProductsData, topEmployees }) {
+// Register Chart.js components
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    ChartTooltip,
+    ChartLegend,
+    ArcElement
+);
+
+export default function Dashboard({ auth, stats, monthlySalesData, topProductsData, topEmployees, recentDeliveries }) {
     const statCards = [
         {
             title: 'Total Employees',
@@ -55,6 +71,126 @@ export default function Dashboard({ auth, stats, monthlySalesData, topProductsDa
             description: 'vs last month'
         },
     ];
+
+    // Sample data for charts if none provided
+    const salesChartData = monthlySalesData?.labels && monthlySalesData?.values ?
+        monthlySalesData.labels.map((label, index) => ({
+            month: label,
+            sales: monthlySalesData.values[index] || 0,
+            expenses: monthlySalesData.expenses ? monthlySalesData.expenses[index] || 0 : 0
+        })) :
+        [
+            { month: 'Jan', sales: 4000, expenses: 2000 },
+            { month: 'Feb', sales: 3000, expenses: 1800 },
+            { month: 'Mar', sales: 5000, expenses: 2200 },
+            { month: 'Apr', sales: 4500, expenses: 2100 },
+            { month: 'May', sales: 6000, expenses: 2500 },
+            { month: 'Jun', sales: 5500, expenses: 2300 },
+        ];
+
+    const productPerformanceData = topProductsData?.labels && topProductsData?.values ?
+        topProductsData.labels.map((label, index) => ({
+            name: label,
+            value: topProductsData.values[index] || 0
+        })) :
+        [
+            { name: 'Product A', value: 400 },
+            { name: 'Product B', value: 300 },
+            { name: 'Product C', value: 200 },
+            { name: 'Product D', value: 100 },
+        ];
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+    // Chart.js configuration for line chart
+    const chartJSData = {
+        labels: salesChartData.map(item => item.month),
+        datasets: [{
+            label: 'Monthly Sales',
+            data: salesChartData.map(item => item.sales),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#10b981',
+            pointHoverBackgroundColor: '#10b981',
+            pointHoverBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointHoverBorderWidth: 3
+        }]
+    };
+
+    const chartJSOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#374151',
+                bodyColor: '#6b7280',
+                borderColor: '#e5e7eb',
+                borderWidth: 1,
+                cornerRadius: 12,
+                displayColors: false,
+                callbacks: {
+                    label: function(context) {
+                        return `Sales: ৳${context.parsed.y.toLocaleString()}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                    drawBorder: false
+                },
+                border: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6b7280',
+                    font: {
+                        size: 12
+                    },
+                    callback: function(value) {
+                        return '৳' + (value / 1000) + 'k';
+                    }
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                },
+                border: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6b7280',
+                    font: {
+                        size: 12
+                    }
+                }
+            }
+        },
+        elements: {
+            point: {
+                radius: 4,
+                hoverRadius: 6,
+                backgroundColor: '#ffffff',
+                borderWidth: 2
+            }
+        }
+    };
 
     return (
         <AuthenticatedLayout
@@ -154,12 +290,89 @@ export default function Dashboard({ auth, stats, monthlySalesData, topProductsDa
                                 <span>View Details</span>
                             </Link>
                         </div>
-                        <div className="h-64 flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl">
-                            <div className="text-center">
-                                <ChartBarIcon className="h-16 w-16 text-indigo-300 mx-auto mb-4" />
-                                <p className="text-gray-500">Sales chart will be rendered here</p>
-                                <p className="text-sm text-gray-400 mt-1">Chart library integration needed</p>
-                            </div>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={salesChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis
+                                        dataKey="month"
+                                        stroke="#6b7280"
+                                        fontSize={12}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#6b7280"
+                                        fontSize={12}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tickFormatter={(value) => `৳${(value / 1000)}k`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                        }}
+                                        formatter={(value, name) => [`৳${value.toLocaleString()}`, 'Sales']}
+                                        labelFormatter={(label) => `Month: ${label}`}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="sales"
+                                        stroke="#8b5cf6"
+                                        strokeWidth={3}
+                                        dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
+                                        activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#ffffff' }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Product Performance Chart */}
+                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-800">Product Performance</h3>
+                            <Link
+                                href={route('reports.product-performance')}
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center space-x-1"
+                            >
+                                <EyeIcon className="h-4 w-4" />
+                                <span>View Details</span>
+                            </Link>
+                        </div>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={productPerformanceData}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ name, percent }) => percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
+                                        outerRadius={85}
+                                        innerRadius={20}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                        paddingAngle={2}
+                                    >
+                                        {productPerformanceData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                        }}
+                                        formatter={(value, name) => [`৳${value.toLocaleString()}`, 'Revenue']}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
 
@@ -213,6 +426,170 @@ export default function Dashboard({ auth, stats, monthlySalesData, topProductsDa
                     </div>
                 </div>
 
+                {/* Additional Analytics Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Revenue vs Expenses Bar Chart */}
+                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-800">Revenue vs Expenses</h3>
+                            <Link
+                                href={route('reports.yearly-comparison')}
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center space-x-1"
+                            >
+                                <EyeIcon className="h-4 w-4" />
+                                <span>View Details</span>
+                            </Link>
+                        </div>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={salesChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis
+                                        dataKey="month"
+                                        stroke="#6b7280"
+                                        fontSize={12}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#6b7280"
+                                        fontSize={12}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tickFormatter={(value) => `৳${(value / 1000)}k`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                                        }}
+                                        formatter={(value, name) => [`৳${value.toLocaleString()}`, name]}
+                                    />
+                                    <Legend />
+                                    <Bar
+                                        dataKey="sales"
+                                        fill="#10b981"
+                                        radius={[4, 4, 0, 0]}
+                                        name="Revenue"
+                                    />
+                                    <Bar
+                                        dataKey="expenses"
+                                        fill="#ef4444"
+                                        radius={[4, 4, 0, 0]}
+                                        name="Expenses"
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Recent Activity Chart */}
+                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-800">Monthly Activity Overview</h3>
+                            <Link
+                                href={route('reports.delivery-stats')}
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center space-x-1"
+                            >
+                                <EyeIcon className="h-4 w-4" />
+                                <span>View Details</span>
+                            </Link>
+                        </div>
+                        <div className="h-64">
+                            <ChartJSLine data={chartJSData} options={chartJSOptions} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Employee Performance and Recent Deliveries */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Top Performers */}
+                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-800">Top Performers</h3>
+                            <Link
+                                href={route('reports.top-performers')}
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center space-x-1"
+                            >
+                                <EyeIcon className="h-4 w-4" />
+                                <span>View All</span>
+                            </Link>
+                        </div>
+                        <div className="space-y-4">
+                            {topEmployees && topEmployees.slice(0, 5).map((employee, index) => (
+                                <div key={employee.id} className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
+                                                index === 0 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                                                index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                                                index === 2 ? 'bg-gradient-to-r from-orange-400 to-red-500' :
+                                                'bg-gradient-to-r from-indigo-400 to-purple-500'
+                                            }`}>
+                                                {employee.name.charAt(0)}
+                                            </div>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium text-gray-800 truncate">{employee.name}</p>
+                                            <p className="text-xs text-gray-500">{employee.deliveries_count} deliveries</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-semibold text-gray-800">৳{(employee.total_amount || 0).toLocaleString()}</p>
+                                        <div className="flex items-center space-x-1">
+                                            {index < 3 && (
+                                                <div className={`w-2 h-2 rounded-full ${
+                                                    index === 0 ? 'bg-yellow-400' :
+                                                    index === 1 ? 'bg-gray-400' :
+                                                    'bg-orange-400'
+                                                }`}></div>
+                                            )}
+                                            <span className="text-xs text-gray-500">#{index + 1}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Recent Deliveries */}
+                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-semibold text-gray-800">Recent Deliveries</h3>
+                            <Link
+                                href="/product-deliveries"
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center space-x-1"
+                            >
+                                <EyeIcon className="h-4 w-4" />
+                                <span>View All</span>
+                            </Link>
+                        </div>
+                        <div className="space-y-4">
+                            {recentDeliveries && recentDeliveries.slice(0, 5).map((delivery, index) => (
+                                <div key={delivery.id} className="flex items-center justify-between p-3 bg-white/50 rounded-xl">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                                                {delivery.product_name?.charAt(0) || 'P'}
+                                            </div>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium text-gray-800 truncate">{delivery.product_name}</p>
+                                            <p className="text-xs text-gray-500">by {delivery.employee_name}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-semibold text-gray-800">৳{(delivery.amount || 0).toLocaleString()}</p>
+                                        <p className="text-xs text-gray-500">{delivery.date}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Quick Actions */}
                 <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">Quick Actions</h3>
@@ -220,7 +597,7 @@ export default function Dashboard({ auth, stats, monthlySalesData, topProductsDa
                         {[
                             { name: 'Add Employee', href: route('employees.create'), icon: UserGroupIcon, color: 'from-blue-500 to-indigo-600' },
                             { name: 'New Product', href: route('products.create'), icon: TruckIcon, color: 'from-emerald-500 to-teal-600' },
-                            { name: 'Add Delivery', href: route('product-deliveries.create'), icon: DocumentTextIcon, color: 'from-purple-500 to-pink-600' },
+                            { name: 'Add Delivery', href: '/product-deliveries/create', icon: DocumentTextIcon, color: 'from-purple-500 to-pink-600' },
                             { name: 'Record Expense', href: route('expenses.create'), icon: CurrencyDollarIcon, color: 'from-orange-500 to-red-600' },
                             { name: 'View Reports', href: route('reports.index'), icon: ChartBarIcon, color: 'from-indigo-500 to-purple-600' },
                             { name: 'Settings', href: route('settings.index'), icon: BuildingOfficeIcon, color: 'from-gray-500 to-gray-700' },

@@ -15,84 +15,151 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Maatwebsite\Excel\Facades\Excel;
-use Spatie\Permission\Traits\HasRoles;
-
 
 class BalanceSheetController extends Controller
 {
     use AuthorizesRequests;
 
-    private function userHasRole($roles)
+    private function userIsSuperAdmin()
     {
-        $user = Auth::user();
-        $userRoles = $user->roles->pluck('name')->toArray();
-        return !empty(array_intersect($userRoles, (array)$roles));
+        return Auth::user()->is_super_admin ?? false;
     }
 
     private function getEmployeesList()
     {
         $user = Auth::user();
-        // Check if user has admin or manager roles
-        $userRoles = $user->roles->pluck('name')->toArray();
-        if (in_array('Super Admin', $userRoles) || in_array('Administrator', $userRoles) || in_array('Manager', $userRoles)) {
-            return User::whereHas('roles', function($query) {
-                $query->where('name', 'Employee');
-            })->get(['id', 'name']);
+        // Check if user is super admin
+        if ($user->is_super_admin) {
+            return User::where('status', 'active')->get(['id', 'name']);
         }
         return collect([$user])->map->only(['id', 'name']);
     }
     public function index(Request $request)
     {
-        $query = BalanceSheet::with(['employee', 'updatedByUser'])
-            ->when($request->input('employee_id'), function ($query, $employeeId) {
-                $query->where('employee_id', $employeeId);
+        // Get employees with their current balance sheet information
+        $query = User::with(['balanceSheets' => function($query) {
+                $query->latest('date');
+            }, 'productDeliveries', 'expenses', 'department', 'position'])
+            ->where('status', 'active')
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('employee_id', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
             })
-            ->when($request->input('date_from'), function ($query, $dateFrom) {
-                $query->where('date', '>=', Carbon::parse($dateFrom)->startOfDay());
+            ->when($request->input('department_id'), function ($query, $departmentId) {
+                $query->where('department_id', $departmentId);
             })
-            ->when($request->input('date_to'), function ($query, $dateTo) {
-                $query->where('date', '<=', Carbon::parse($dateTo)->endOfDay());
+            ->when($request->input('position_id'), function ($query, $positionId) {
+                $query->where('position_id', $positionId);
             })
-            ->when(!$this->userHasRole(['Super Admin', 'Administrator', 'Manager']), function ($query) {
-                $query->where('employee_id', Auth::id());
+            ->when(!$this->userIsSuperAdmin(), function ($query) {
+                $query->where('id', Auth::id());
             });
 
-        $balanceSheets = $query->orderBy('date', 'desc')->paginate(10)
-            ->through(function ($sheet) {
-                $sheet->total_amount = $sheet->getTotalAmount();
-                return $sheet;
-            });
+        $employees = $query->paginate(20);
+
+        // Calculate summary statistics
+        $totalEmployees = $employees->total();
+        $totalBalance = 0;
+        $totalMarketDues = 0;
+        $totalProductsInHand = 0;
+
+        foreach ($employees as $employee) {
+            $currentBalance = $employee->balanceSheets->first()?->current_balance ?? 0;
+            $totalBalance += $currentBalance;
+
+            // Calculate market dues (unpaid deliveries)
+            $marketDues = $employee->productDeliveries()
+                ->where('payment_status', 'pending')
+                ->sum('total_amount');
+            $totalMarketDues += $marketDues;
+
+            // Calculate products in hand (recent stock)
+            $productsInHand = $employee->employeeStocks()
+                ->sum('quantity');
+            $totalProductsInHand += $productsInHand;
+        }
 
         return Inertia::render('BalanceSheets/Index', [
-            'balanceSheets' => $balanceSheets,
-            'employees' => fn () => $this->getEmployeesList(),
-            'canViewAllEmployees' => $this->userHasRole(['Super Admin', 'Administrator', 'Manager']),
-            'filters' => $request->only(['employee_id', 'date_from', 'date_to'])
+            'employees' => $employees,
+            'filters' => $request->only(['search', 'department_id', 'position_id']),
+            'departments' => \App\Models\Department::all(['id', 'name']),
+            'positions' => \App\Models\Position::all(['id', 'title']),
+            'canViewAllEmployees' => $this->userIsSuperAdmin(),
+            'summary' => [
+                'total_employees' => $totalEmployees,
+                'total_balance' => $totalBalance,
+                'total_market_dues' => $totalMarketDues,
+                'total_products_in_hand' => $totalProductsInHand
+            ]
         ]);
     }
 
     public function show($employeeId)
     {
-        $balanceSheet = BalanceSheet::where('employee_id', $employeeId)
-            ->with(['employee', 'productDeliveries', 'expenses'])
-            ->firstOrFail();
+        $employee = User::with(['balanceSheets', 'productDeliveries', 'expenses', 'department', 'position', 'employeeStocks'])
+            ->findOrFail($employeeId);
 
-        $deliveries = ProductDelivery::where('employee_id', $employeeId)
+        // Check if user can view this employee's balance sheet
+        if (!$this->userIsSuperAdmin() && $employee->id !== Auth::id()) {
+            abort(403, 'Unauthorized to view this employee\'s balance sheet');
+        }
+
+        // Get current balance sheet or create summary
+        $latestBalanceSheet = $employee->balanceSheets()->latest('date')->first();
+
+        // Calculate current financial position
+        $totalDeliveries = $employee->productDeliveries()->sum('total_amount');
+        $paidDeliveries = $employee->productDeliveries()->where('payment_status', 'paid')->sum('total_amount');
+        $pendingDeliveries = $employee->productDeliveries()->where('payment_status', 'pending')->sum('total_amount');
+
+        $totalExpenses = $employee->expenses()->sum('amount');
+        $currentBalance = $latestBalanceSheet?->current_balance ?? 0;
+
+        // Products in hand
+        $productsInHand = $employee->employeeStocks()->with('product')->get();
+        $totalProductValue = $productsInHand->sum(function($stock) {
+            return $stock->quantity * ($stock->product->price ?? 0);
+        });
+
+        // Recent deliveries and expenses
+        $recentDeliveries = $employee->productDeliveries()
             ->with('product')
             ->orderBy('delivery_date', 'desc')
-            ->paginate(10);
+            ->limit(10)
+            ->get();
+
+        $recentExpenses = $employee->expenses()
+            ->orderBy('expense_date', 'desc')
+            ->limit(10)
+            ->get();
 
         return Inertia::render('BalanceSheets/Show', [
-            'balanceSheet' => $balanceSheet,
-            'deliveries' => $deliveries,
-            'canEdit' => $this->userHasRole(['Super Admin', 'Administrator', 'Manager'])
+            'employee' => $employee,
+            'balanceSheet' => $latestBalanceSheet,
+            'financialSummary' => [
+                'current_balance' => $currentBalance,
+                'total_deliveries' => $totalDeliveries,
+                'paid_deliveries' => $paidDeliveries,
+                'pending_deliveries' => $pendingDeliveries,
+                'market_dues' => $pendingDeliveries,
+                'total_expenses' => $totalExpenses,
+                'products_in_hand_value' => $totalProductValue,
+                'net_position' => $currentBalance + $totalProductValue - $pendingDeliveries
+            ],
+            'productsInHand' => $productsInHand,
+            'recentDeliveries' => $recentDeliveries,
+            'recentExpenses' => $recentExpenses,
+            'canEdit' => $this->userIsSuperAdmin()
         ]);
     }
 
     public function updateBalance(Request $request, $id)
     {
         // Check if user has permission to update balance sheets
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager'])) {
+        if (!$this->userIsSuperAdmin()) {
             abort(403, 'Unauthorized to update balance sheets');
         }
 
@@ -135,44 +202,16 @@ class BalanceSheetController extends Controller
     public function export(Request $request)
     {
         // Check if user has permission to export balance sheets
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager'])) {
+        if (!$this->userIsSuperAdmin()) {
             abort(403, 'Unauthorized to export balance sheets');
         }
 
-        $filters = $request->only(['employee_id', 'date_from', 'date_to']);
+        $filters = $request->only(['search', 'department_id', 'position_id']);
         $type = $request->input('type', 'xlsx');
 
         return Excel::download(
             new BalanceSheetExport($filters),
-            'balance_sheet_' . Carbon::now()->format('Y-m-d') . '.' . $type
+            'employee_balance_positions_' . Carbon::now()->format('Y-m-d') . '.' . $type
         );
-    }
-
-    public function import(Request $request)
-    {
-        // Check if user has permission to import balance sheets
-        if (!$this->userHasRole(['Super Admin', 'Administrator', 'Manager'])) {
-            abort(403, 'Unauthorized to import balance sheets');
-        }
-
-        $request->validate([
-            'file' => 'required|file|mimes:xlsx,csv'
-        ]);
-
-        try {
-            Excel::import(new BalanceSheetImport(), $request->file('file'));
-            return response()->json(['success' => 'Balance sheets imported successfully']);
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            return response()->json([
-                'importErrors' => collect($e->failures())->map(function ($failure) {
-                    return [
-                        'row' => $failure->row(),
-                        'errors' => $failure->errors()
-                    ];
-                })
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Error importing balance sheets: ' . $e->getMessage()], 422);
-        }
     }
 }

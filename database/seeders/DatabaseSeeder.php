@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             PositionSeeder::class,
 
-            // Users with roles and permissions (handles roles internally)
+            // Users seeder with super admin creation
             UserSeeder::class,
 
             // Balance sheets for users

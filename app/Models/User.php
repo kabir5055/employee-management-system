@@ -6,12 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Traits\Filterable;
-use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, Filterable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, Filterable;
 
     /**
      * The attributes that are mass assignable.
@@ -23,7 +22,7 @@ class User extends Authenticatable
         'date_of_birth', 'joining_date', 'leaving_date', 'department_id',
         'position_id', 'status', 'nid_number', 'current_salary',
         'profile_photo_path', 'district_id', 'upazila_id', 'thana_id',
-        'designation', 'employee_code'
+        'designation', 'employee_code', 'is_super_admin'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -34,6 +33,7 @@ class User extends Authenticatable
         'joining_date' => 'date',
         'leaving_date' => 'date',
         'current_salary' => 'decimal:2',
+        'is_super_admin' => 'boolean',
     ];
 
 
@@ -105,6 +105,16 @@ class User extends Authenticatable
     public function expenses()
     {
         return $this->hasMany(Expense::class, 'employee_id');
+    }
+
+    public function balanceSheets()
+    {
+        return $this->hasMany(BalanceSheet::class, 'employee_id');
+    }
+
+    public function employeeStocks()
+    {
+        return $this->hasMany(EmployeeStock::class, 'employee_id');
     }
 
     public function employeeHistory()

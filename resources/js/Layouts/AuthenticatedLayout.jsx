@@ -28,17 +28,12 @@ import {
 export default function AuthenticatedLayout({ user, header, children }) {
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const { url } = usePage();
 
-    // Helper function to check if user has permission
-    const hasPermission = (permission) => {
-        return user?.all_permissions?.some(p => p.name === permission) ||
-               user?.roles?.some(role => role.name === 'super-admin');
-    };
-
-    // Helper function to check if user has role
-    const hasRole = (roleName) => {
-        return user?.roles?.some(role => role.name === roleName);
+    // Helper function to check if user is super admin
+    const isSuperAdmin = () => {
+        return user?.is_super_admin === true;
     };
 
     // Helper function to check if route is current
@@ -53,6 +48,26 @@ export default function AuthenticatedLayout({ user, header, children }) {
             return currentPath.startsWith('/employees');
         }
 
+        if (routeName === 'products.*') {
+            return currentPath.startsWith('/products');
+        }
+
+        if (routeName === 'product-deliveries.*') {
+            return currentPath.startsWith('/product-deliveries');
+        }
+
+        if (routeName === 'balance-sheets.*') {
+            return currentPath.startsWith('/balance-sheets');
+        }
+
+        if (routeName === 'expenses.*') {
+            return currentPath.startsWith('/expenses');
+        }
+
+        if (routeName === 'reports.*') {
+            return currentPath.startsWith('/reports');
+        }
+
         if (routeName === 'admin.*') {
             return currentPath.startsWith('/admin');
         }
@@ -65,10 +80,15 @@ export default function AuthenticatedLayout({ user, header, children }) {
             return currentPath.startsWith('/permissions');
         }
 
+        if (routeName === 'settings.*') {
+            return currentPath.startsWith('/settings');
+        }
+
         return false;
     };
 
     // Define navigation sections with permissions
+    // Define navigation sections
     const navigationSections = [
         {
             title: 'Dashboard',
@@ -77,8 +97,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     name: 'Dashboard',
                     href: route('dashboard'),
                     icon: HomeIcon,
-                    current: isCurrentRoute('dashboard'),
-                    permission: 'view-dashboard'
+                    current: isCurrentRoute('dashboard')
                 },
             ]
         },
@@ -89,8 +108,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     name: 'Employees',
                     href: route('employees.index'),
                     icon: UserGroupIcon,
-                    current: isCurrentRoute('employees.*'),
-                    permission: 'view-employees'
+                    current: isCurrentRoute('employees.*')
                 },
             ]
         },
@@ -99,24 +117,27 @@ export default function AuthenticatedLayout({ user, header, children }) {
             items: [
                 {
                     name: 'Products',
-                    href: '#',
+                    href: route('products.index'),
                     icon: TruckIcon,
-                    current: false,
-                    permission: 'view-products'
+                    current: isCurrentRoute('products.*')
                 },
                 {
-                    name: 'Collections',
-                    href: '#',
+                    name: 'Product Deliveries',
+                    href: route('product-deliveries.index'),
                     icon: DocumentTextIcon,
-                    current: false,
-                    permission: 'view-collections'
+                    current: isCurrentRoute('product-deliveries.*')
+                },
+                {
+                    name: 'Balance Sheets',
+                    href: route('balance-sheets.index'),
+                    icon: BanknotesIcon,
+                    current: isCurrentRoute('balance-sheets.*')
                 },
                 {
                     name: 'Expenses',
-                    href: '#',
-                    icon: BanknotesIcon,
-                    current: false,
-                    permission: 'view-expenses'
+                    href: route('expenses.index'),
+                    icon: CurrencyDollarIcon,
+                    current: isCurrentRoute('expenses.*')
                 },
             ]
         },
@@ -125,104 +146,96 @@ export default function AuthenticatedLayout({ user, header, children }) {
             items: [
                 {
                     name: 'Reports',
-                    href: '#',
+                    href: route('reports.index'),
                     icon: ChartBarIcon,
-                    current: false,
-                    permission: 'view-reports'
+                    current: isCurrentRoute('reports.*')
                 },
             ]
         },
-        {
+        // Admin section - only for super admin
+        ...(isSuperAdmin() ? [{
             title: 'Administration',
             items: [
                 {
                     name: 'User Management',
                     href: route('admin.user-permissions'),
                     icon: UsersIcon,
-                    current: isCurrentRoute('admin.*'),
-                    permission: 'view-users',
-                    roles: ['super-admin', 'admin']
+                    current: isCurrentRoute('admin.*')
                 },
                 {
                     name: 'Roles',
                     href: route('roles.index'),
                     icon: ShieldCheckIcon,
-                    current: isCurrentRoute('roles.*'),
-                    permission: 'view-roles',
-                    roles: ['super-admin']
+                    current: isCurrentRoute('roles.*')
                 },
                 {
                     name: 'Permissions',
                     href: route('permissions.index'),
                     icon: KeyIcon,
-                    current: isCurrentRoute('permissions.*'),
-                    permission: 'view-permissions',
-                    roles: ['super-admin']
+                    current: isCurrentRoute('permissions.*')
                 },
                 {
                     name: 'Settings',
-                    href: '#',
+                    href: route('settings.index'),
                     icon: CogIcon,
-                    current: false,
-                    permission: 'view-settings'
+                    current: isCurrentRoute('settings.*')
                 },
             ]
-        },
+        }] : [])
     ];
 
-    // Filter navigation items based on permissions and roles
-    const filteredNavigation = navigationSections.map(section => ({
-        ...section,
-        items: section.items.filter(item => {
-            // Check permission
-            if (item.permission && !hasPermission(item.permission)) {
-                return false;
-            }
-
-            // Check roles if specified
-            if (item.roles && !item.roles.some(role => hasRole(role))) {
-                return false;
-            }
-
-            return true;
-        })
-    })).filter(section => section.items.length > 0);
+    // No filtering needed - just use the sections as-is
+    const filteredNavigation = navigationSections;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="h-screen bg-gray-50 flex overflow-hidden">
             {/* Sidebar */}
-            <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-gray-900 to-gray-800 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 shadow-xl`}>
-                <div className="flex items-center justify-center h-16 bg-gray-900 border-b border-gray-700">
-                    <ApplicationLogo className="block h-9 w-auto fill-current text-blue-400" />
-                    <span className="ml-2 text-white font-bold text-xl tracking-wide">EMS</span>
+            <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} fixed inset-y-0 left-0 z-50 bg-gradient-to-b from-gray-900 to-gray-800 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 shadow-xl flex flex-col`}>
+                <div className="flex items-center justify-center h-16 bg-gray-900 border-b border-gray-700 flex-shrink-0">
+                    {!sidebarCollapsed ? (
+                        <>
+                            <ApplicationLogo className="block h-9 w-auto fill-current text-blue-400" />
+                            <span className="ml-2 text-white font-bold text-xl tracking-wide">EMS</span>
+                        </>
+                    ) : (
+                        <ApplicationLogo className="block h-8 w-auto fill-current text-blue-400" />
+                    )}
                 </div>
 
-                <nav className="mt-5 px-2 overflow-y-auto h-full pb-20">
+                <nav className="flex-1 mt-5 px-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
                     {filteredNavigation.map((section, sectionIndex) => (
                         <div key={section.title} className={sectionIndex > 0 ? 'mt-8' : ''}>
-                            <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                                {section.title}
-                            </h3>
-                            <div className="mt-2 space-y-1">
+                            {!sidebarCollapsed && (
+                                <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                    {section.title}
+                                </h3>
+                            )}
+                            <div className={`${!sidebarCollapsed ? 'mt-2' : ''} space-y-1`}>
                                 {section.items.map((item) => (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className={`${
-                                            item.current
-                                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
-                                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                        } group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105`}
-                                    >
-                                        <item.icon
+                                    <div key={item.name} className="relative group">
+                                        <Link
+                                            href={item.href}
                                             className={`${
                                                 item.current
-                                                    ? 'text-white'
-                                                    : 'text-gray-400 group-hover:text-white'
-                                            } mr-3 h-5 w-5`}
-                                        />
-                                        {item.name}
-                                    </Link>
+                                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                            } group flex items-center ${sidebarCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out ${!sidebarCollapsed && 'transform hover:scale-105'}`}
+                                        >
+                                            <item.icon
+                                                className={`${
+                                                    item.current
+                                                        ? 'text-white'
+                                                        : 'text-gray-400 group-hover:text-white'
+                                                } ${sidebarCollapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}`}
+                                            />
+                                            {!sidebarCollapsed && item.name}
+                                        </Link>
+                                        {sidebarCollapsed && (
+                                            <div className="absolute left-full ml-2 top-0 bg-gray-800 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+                                                {item.name}
+                                            </div>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -230,8 +243,8 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 </nav>
 
                 {/* User info at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-800 border-t border-gray-700">
-                    <div className="flex items-center">
+                <div className="flex-shrink-0 p-4 bg-gray-800 border-t border-gray-700">
+                    <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
                         <div className="flex-shrink-0">
                             <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
                                 <span className="text-sm font-medium text-white">
@@ -239,14 +252,32 @@ export default function AuthenticatedLayout({ user, header, children }) {
                                 </span>
                             </div>
                         </div>
-                        <div className="ml-3">
-                            <p className="text-sm font-medium text-white">{user?.name}</p>
-                            <p className="text-xs text-gray-400">
-                                {user?.roles?.[0]?.name?.replace('-', ' ').toUpperCase() || 'Employee'}
-                            </p>
-                        </div>
+                        {!sidebarCollapsed && (
+                            <div className="ml-3 min-w-0 flex-1">
+                                <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                                <p className="text-xs text-gray-400 truncate">
+                                    {user?.roles?.[0]?.name?.replace('-', ' ').toUpperCase() || 'Employee'}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
+
+                {/* Sidebar Toggle Button */}
+                <button
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="hidden lg:flex absolute -right-3 top-20 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1.5 shadow-lg transition-colors duration-200 z-10"
+                >
+                    {sidebarCollapsed ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    )}
+                </button>
             </div>
 
             {/* Mobile sidebar overlay */}
@@ -257,9 +288,9 @@ export default function AuthenticatedLayout({ user, header, children }) {
             )}
 
             {/* Main content */}
-            <div className="lg:pl-64 flex flex-col flex-1">
+            <div className="flex-1 flex flex-col min-w-0 h-screen">
                 {/* Top navigation */}
-                <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white shadow-sm border-b border-gray-200">
+                <div className="flex-shrink-0 flex h-16 bg-white shadow-sm border-b border-gray-200">
                     <button
                         type="button"
                         className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
@@ -269,11 +300,11 @@ export default function AuthenticatedLayout({ user, header, children }) {
                         <Bars3Icon className="h-6 w-6" aria-hidden="true" />
                     </button>
 
-                    <div className="flex-1 px-4 flex justify-between items-center">
-                        <div className="flex-1">
+                    <div className="flex-1 px-4 flex justify-between items-center min-w-0">
+                        <div className="flex-1 min-w-0">
                             {header && (
                                 <header className="py-2">
-                                    <div className="text-lg font-semibold text-gray-900">{header}</div>
+                                    <div className="text-lg font-semibold text-gray-900 truncate">{header}</div>
                                 </header>
                             )}
                         </div>
@@ -316,7 +347,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                 </div>
 
                 {/* Page content */}
-                <main className="flex-1">
+                <main className="flex-1 overflow-y-auto bg-gray-50 hide-scrollbar">
                     <div className="py-6">
                         {children}
                     </div>
