@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import React from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
@@ -28,7 +29,12 @@ import {
     BriefcaseIcon,
     UserIcon,
     IdentificationIcon,
-    TrophyIcon
+    TrophyIcon,
+    TagIcon,
+    ScaleIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+    AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline';
 
 export default function AuthenticatedLayout({ user, header, children }) {
@@ -42,6 +48,20 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
     // Handle form validation errors with toasts
     useFormErrors();
+
+    // Toggle menu expansion
+    const toggleMenu = (menuKey) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuKey]: !prev[menuKey]
+        }));
+    };
+
+    // Check if any child in a parent menu is active
+    const hasActiveChild = (item) => {
+        if (!item.hasChildren || !item.children) return false;
+        return item.children.some(child => child.current);
+    };
 
     // Helper function to check if user is super admin
     const isSuperAdmin = () => {
@@ -62,6 +82,18 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
         if (routeName === 'products.*') {
             return currentPath.startsWith('/products');
+        }
+
+        if (routeName === 'product-categories.*') {
+            return currentPath.startsWith('/product-categories');
+        }
+
+        if (routeName === 'product-units.*') {
+            return currentPath.startsWith('/product-units');
+        }
+
+        if (routeName === 'product-adjustments.*') {
+            return currentPath.startsWith('/product-adjustments');
         }
 
         if (routeName === 'positions.*') {
@@ -90,6 +122,10 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
         if (routeName === 'expenses.*') {
             return currentPath.startsWith('/expenses');
+        }
+
+        if (routeName === 'product-adjustments.*') {
+            return currentPath.startsWith('/product-adjustments');
         }
 
         if (routeName === 'reports.*') {
@@ -169,13 +205,34 @@ export default function AuthenticatedLayout({ user, header, children }) {
             ]
         },
         {
-            title: 'Operations',
+            title: 'Inventory Management',
             items: [
                 {
                     name: 'Products',
-                    href: route('products.index'),
                     icon: TruckIcon,
-                    current: isCurrentRoute('products.*')
+                    hasChildren: true,
+                    children: [
+                        {
+                            name: 'All Products',
+                            href: route('products.index'),
+                            current: isCurrentRoute('products.*')
+                        },
+                        {
+                            name: 'Categories',
+                            href: route('product-categories.index'),
+                            current: isCurrentRoute('product-categories.*')
+                        },
+                        {
+                            name: 'Units',
+                            href: route('product-units.index'),
+                            current: isCurrentRoute('product-units.*')
+                        },
+                        {
+                            name: 'Adjustments',
+                            href: route('product-adjustments.index'),
+                            current: isCurrentRoute('product-adjustments.*')
+                        }
+                    ]
                 },
                 {
                     name: 'Product Deliveries',
@@ -231,6 +288,31 @@ export default function AuthenticatedLayout({ user, header, children }) {
         });
     }
 
+    // Auto-expand parent menus if any child is active
+    const getInitialExpandedMenus = () => {
+        const expanded = {};
+        navigationSections.forEach((section) => {
+            section.items.forEach((item) => {
+                if (item.hasChildren && item.children) {
+                    const hasActiveChild = item.children.some(child => child.current);
+                    if (hasActiveChild) {
+                        expanded[`${section.title}-${item.name}`] = true;
+                    }
+                }
+            });
+        });
+        return expanded;
+    };
+
+    // Initialize expandedMenus with auto-expanded parent menus
+    const [expandedMenus, setExpandedMenus] = useState(getInitialExpandedMenus());
+
+    // Update expanded menus when route changes
+    React.useEffect(() => {
+        const newExpanded = getInitialExpandedMenus();
+        setExpandedMenus(prev => ({ ...prev, ...newExpanded }));
+    }, [url]);
+
     // No filtering needed - just use the sections as-is
     const filteredNavigation = navigationSections;
 
@@ -260,27 +342,89 @@ export default function AuthenticatedLayout({ user, header, children }) {
                             <div className={`${!sidebarCollapsed ? 'mt-2' : ''} space-y-1`}>
                                 {section.items.map((item) => (
                                     <div key={item.name} className="relative group">
-                                        <Link
-                                            href={item.href}
-                                            className={`${
-                                                item.current
-                                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
-                                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                            } group flex items-center ${sidebarCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out ${!sidebarCollapsed && 'transform hover:scale-105'}`}
-                                        >
-                                            <item.icon
-                                                className={`${
-                                                    item.current
-                                                        ? 'text-white'
-                                                        : 'text-gray-400 group-hover:text-white'
-                                                } ${sidebarCollapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}`}
-                                            />
-                                            {!sidebarCollapsed && item.name}
-                                        </Link>
-                                        {sidebarCollapsed && (
-                                            <div className="absolute left-full ml-2 top-0 bg-gray-800 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
-                                                {item.name}
+                                        {item.hasChildren ? (
+                                            // Parent menu with children
+                                            <div>
+                                                <button
+                                                    onClick={() => toggleMenu(`${section.title}-${item.name}`)}
+                                                    className={`w-full ${
+                                                        hasActiveChild(item)
+                                                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                                                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                                    } group flex items-center ${sidebarCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
+                                                >
+                                                    <item.icon
+                                                        className={`${
+                                                            hasActiveChild(item)
+                                                                ? 'text-white'
+                                                                : 'text-gray-400 group-hover:text-white'
+                                                        } ${sidebarCollapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}`}
+                                                    />
+                                                    {!sidebarCollapsed && (
+                                                        <>
+                                                            <span className="flex-1 text-left">{item.name}</span>
+                                                            {expandedMenus[`${section.title}-${item.name}`] ? (
+                                                                <ChevronDownIcon className={`h-4 w-4 ${hasActiveChild(item) ? 'text-white' : 'text-gray-400'}`} />
+                                                            ) : (
+                                                                <ChevronRightIcon className={`h-4 w-4 ${hasActiveChild(item) ? 'text-white' : 'text-gray-400'}`} />
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </button>
+
+                                                {/* Children menu items */}
+                                                {!sidebarCollapsed && expandedMenus[`${section.title}-${item.name}`] && (
+                                                    <div className="ml-6 mt-1 space-y-1">
+                                                        {item.children.map((child) => (
+                                                            <Link
+                                                                key={child.name}
+                                                                href={child.href}
+                                                                className={`${
+                                                                    child.current
+                                                                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                                                                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                                                } group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105`}
+                                                            >
+                                                                <div className="w-2 h-2 bg-gray-400 rounded-full mr-3 group-hover:bg-white"></div>
+                                                                {child.name}
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Tooltip for collapsed sidebar */}
+                                                {sidebarCollapsed && (
+                                                    <div className="absolute left-full ml-2 top-0 bg-gray-800 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+                                                        {item.name}
+                                                    </div>
+                                                )}
                                             </div>
+                                        ) : (
+                                            // Regular menu item
+                                            <>
+                                                <Link
+                                                    href={item.href}
+                                                    className={`${
+                                                        item.current
+                                                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                                                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                                    } group flex items-center ${sidebarCollapsed ? 'justify-center' : 'px-3'} py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out ${!sidebarCollapsed && 'transform hover:scale-105'}`}
+                                                >
+                                                    <item.icon
+                                                        className={`${
+                                                            item.current
+                                                                ? 'text-white'
+                                                                : 'text-gray-400 group-hover:text-white'
+                                                        } ${sidebarCollapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}`}
+                                                    />
+                                                    {!sidebarCollapsed && item.name}
+                                                </Link>
+                                                {sidebarCollapsed && (
+                                                    <div className="absolute left-full ml-2 top-0 bg-gray-800 text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+                                                        {item.name}
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 ))}

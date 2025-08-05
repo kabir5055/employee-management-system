@@ -4,22 +4,94 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import RichTextEditor from '@/Components/RichTextEditor';
+import { ArrowLeftIcon, XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 
-export default function Create({ auth }) {
+export default function Create({ auth, categories, units }) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         description: '',
-        price: '',
         cost_price: '',
-        stock_quantity: '',
+        tp_price: '',
+        mrp_price: '',
         sku: '',
-        status: 'active'
+        category_id: '',
+        unit_id: '',
+        status: 'active',
+        images: [],
+        primary_image_index: 0
     });
+
+    const [selectedImages, setSelectedImages] = useState([]);
+    const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
+
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+
+        if (files.length > 5) {
+            alert('Maximum 5 images allowed');
+            return;
+        }
+
+        // Create preview URLs
+        const previews = files.map(file => ({
+            file,
+            url: URL.createObjectURL(file),
+            name: file.name
+        }));
+
+        setSelectedImages(previews);
+        setData('images', files);
+
+        // Reset primary index if needed
+        if (primaryImageIndex >= files.length) {
+            setPrimaryImageIndex(0);
+            setData('primary_image_index', 0);
+        }
+    };
+
+    const removeImage = (indexToRemove) => {
+        const newImages = selectedImages.filter((_, index) => index !== indexToRemove);
+        const newFiles = Array.from(data.images).filter((_, index) => index !== indexToRemove);
+
+        setSelectedImages(newImages);
+        setData('images', newFiles);
+
+        // Adjust primary image index
+        if (primaryImageIndex === indexToRemove) {
+            setPrimaryImageIndex(0);
+            setData('primary_image_index', 0);
+        } else if (primaryImageIndex > indexToRemove) {
+            const newPrimaryIndex = primaryImageIndex - 1;
+            setPrimaryImageIndex(newPrimaryIndex);
+            setData('primary_image_index', newPrimaryIndex);
+        }
+    };
+
+    const setPrimaryImage = (index) => {
+        setPrimaryImageIndex(index);
+        setData('primary_image_index', index);
+    };
 
     const submit = (e) => {
         e.preventDefault();
-        post(route('products.store'));
+
+        const formData = new FormData();
+        Object.keys(data).forEach(key => {
+            if (key === 'images') {
+                data.images.forEach((image, index) => {
+                    formData.append(`images[${index}]`, image);
+                });
+            } else {
+                formData.append(key, data[key]);
+            }
+        });
+
+        post(route('products.store'), {
+            data: formData,
+            forceFormData: true,
+        });
     };
 
     return (
@@ -45,7 +117,7 @@ export default function Create({ auth }) {
                             </div>
 
                             <form onSubmit={submit}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <div>
                                         <InputLabel htmlFor="name" value="Name" />
                                         <TextInput
@@ -73,22 +145,6 @@ export default function Create({ auth }) {
                                     </div>
 
                                     <div>
-                                        <InputLabel htmlFor="price" value="Price" />
-                                        <TextInput
-                                            id="price"
-                                            name="price"
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            value={data.price}
-                                            className="mt-1 block w-full"
-                                            onChange={(e) => setData('price', e.target.value)}
-                                            required
-                                        />
-                                        {errors.price && <div className="text-red-600 text-sm mt-1">{errors.price}</div>}
-                                    </div>
-
-                                    <div>
                                         <InputLabel htmlFor="cost_price" value="Cost Price" />
                                         <TextInput
                                             id="cost_price"
@@ -99,24 +155,76 @@ export default function Create({ auth }) {
                                             value={data.cost_price}
                                             className="mt-1 block w-full"
                                             onChange={(e) => setData('cost_price', e.target.value)}
-                                            required
                                         />
                                         {errors.cost_price && <div className="text-red-600 text-sm mt-1">{errors.cost_price}</div>}
                                     </div>
 
                                     <div>
-                                        <InputLabel htmlFor="stock_quantity" value="Stock Quantity" />
+                                        <InputLabel htmlFor="tp_price" value="TP Price" />
                                         <TextInput
-                                            id="stock_quantity"
-                                            name="stock_quantity"
+                                            id="tp_price"
+                                            name="tp_price"
                                             type="number"
+                                            step="0.01"
                                             min="0"
-                                            value={data.stock_quantity}
+                                            value={data.tp_price}
                                             className="mt-1 block w-full"
-                                            onChange={(e) => setData('stock_quantity', e.target.value)}
-                                            required
+                                            onChange={(e) => setData('tp_price', e.target.value)}
                                         />
-                                        {errors.stock_quantity && <div className="text-red-600 text-sm mt-1">{errors.stock_quantity}</div>}
+                                        {errors.tp_price && <div className="text-red-600 text-sm mt-1">{errors.tp_price}</div>}
+                                    </div>
+
+                                    <div>
+                                        <InputLabel htmlFor="mrp_price" value="MRP Price" />
+                                        <TextInput
+                                            id="mrp_price"
+                                            name="mrp_price"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={data.mrp_price}
+                                            className="mt-1 block w-full"
+                                            onChange={(e) => setData('mrp_price', e.target.value)}
+                                        />
+                                        {errors.mrp_price && <div className="text-red-600 text-sm mt-1">{errors.mrp_price}</div>}
+                                    </div>
+
+                                    <div>
+                                        <InputLabel htmlFor="category_id" value="Category" />
+                                        <select
+                                            id="category_id"
+                                            name="category_id"
+                                            value={data.category_id}
+                                            className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                            onChange={(e) => setData('category_id', e.target.value)}
+                                        >
+                                            <option value="">Select Category</option>
+                                            {categories.map((category) => (
+                                                <option key={category.id} value={category.id}>
+                                                    {category.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.category_id && <div className="text-red-600 text-sm mt-1">{errors.category_id}</div>}
+                                    </div>
+
+                                    <div>
+                                        <InputLabel htmlFor="unit_id" value="Unit" />
+                                        <select
+                                            id="unit_id"
+                                            name="unit_id"
+                                            value={data.unit_id}
+                                            className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                            onChange={(e) => setData('unit_id', e.target.value)}
+                                        >
+                                            <option value="">Select Unit</option>
+                                            {units.map((unit) => (
+                                                <option key={unit.id} value={unit.id}>
+                                                    {unit.name} ({unit.short_name})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.unit_id && <div className="text-red-600 text-sm mt-1">{errors.unit_id}</div>}
                                     </div>
 
                                     <div>
@@ -135,17 +243,90 @@ export default function Create({ auth }) {
                                         {errors.status && <div className="text-red-600 text-sm mt-1">{errors.status}</div>}
                                     </div>
 
-                                    <div className="col-span-2">
+                                    <div className="col-span-1 md:col-span-2 lg:col-span-3">
                                         <InputLabel htmlFor="description" value="Description" />
-                                        <textarea
-                                            id="description"
-                                            name="description"
-                                            value={data.description}
-                                            className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                                            rows="3"
-                                            onChange={(e) => setData('description', e.target.value)}
-                                        ></textarea>
+                                        <div className="mt-1">
+                                            <RichTextEditor
+                                                value={data.description}
+                                                onChange={(value) => setData('description', value)}
+                                                placeholder="Enter product description..."
+                                                className="min-h-[120px]"
+                                            />
+                                        </div>
                                         {errors.description && <div className="text-red-600 text-sm mt-1">{errors.description}</div>}
+                                    </div>
+
+                                    {/* Image Upload Section */}
+                                    <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                                        <InputLabel htmlFor="images" value="Product Images (Max 5)" />
+                                        <div className="mt-1">
+                                            <input
+                                                type="file"
+                                                id="images"
+                                                name="images"
+                                                multiple
+                                                accept="image/*"
+                                                onChange={handleImageChange}
+                                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                            />
+                                            {errors.images && <div className="text-red-600 text-sm mt-1">{errors.images}</div>}
+
+                                            {/* Image Previews */}
+                                            {selectedImages.length > 0 && (
+                                                <div className="mt-4">
+                                                    <p className="text-sm font-medium mb-2">Selected Images:</p>
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                                        {selectedImages.map((image, index) => (
+                                                            <div key={index} className="relative group">
+                                                                <img
+                                                                    src={image.url}
+                                                                    alt={`Preview ${index + 1}`}
+                                                                    className={`w-full h-24 object-cover rounded-lg border-2 transition-all ${
+                                                                        primaryImageIndex === index
+                                                                            ? 'border-indigo-500 ring-2 ring-indigo-200'
+                                                                            : 'border-gray-200'
+                                                                    }`}
+                                                                />
+
+                                                                {/* Primary badge */}
+                                                                {primaryImageIndex === index && (
+                                                                    <div className="absolute top-1 left-1 bg-indigo-500 text-white text-xs px-2 py-1 rounded">
+                                                                        Primary
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Controls */}
+                                                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                    <div className="flex space-x-1">
+                                                                        {primaryImageIndex !== index && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setPrimaryImage(index)}
+                                                                                className="bg-white text-gray-700 p-1 rounded-full text-xs hover:bg-gray-50"
+                                                                                title="Set as primary"
+                                                                            >
+                                                                                <PhotoIcon className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeImage(index)}
+                                                                            className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                                                            title="Remove image"
+                                                                        >
+                                                                            <XMarkIcon className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-2">
+                                                        Click on an image to set it as primary. Primary image will be displayed as the main product image.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

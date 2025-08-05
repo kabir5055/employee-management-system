@@ -19,11 +19,11 @@ export default function Create({ departments, positions }) {
         employee_id: '',
         phone: '',
         address: '',
-        hire_date: '',
+        joining_date: '',
         salary: '',
         department_id: '',
         position_id: '',
-        is_active: true,
+        status: 'active',
         is_super_admin: false,
         image: null,
     });
@@ -240,17 +240,17 @@ export default function Create({ departments, positions }) {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="hire_date" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Hire Date
+                                    <label htmlFor="joining_date" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Joining Date
                                     </label>
                                     <input
                                         type="date"
-                                        id="hire_date"
-                                        value={data.hire_date}
-                                        onChange={(e) => setData('hire_date', e.target.value)}
+                                        id="joining_date"
+                                        value={data.joining_date}
+                                        onChange={(e) => setData('joining_date', e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                                     />
-                                    {errors.hire_date && <p className="mt-1 text-sm text-red-600">{errors.hire_date}</p>}
+                                    {errors.joining_date && <p className="mt-1 text-sm text-red-600">{errors.joining_date}</p>}
                                 </div>
 
                                 <div>
@@ -292,8 +292,8 @@ export default function Create({ departments, positions }) {
                                     <label className="flex items-center">
                                         <input
                                             type="checkbox"
-                                            checked={data.is_active}
-                                            onChange={(e) => setData('is_active', e.target.checked)}
+                                            checked={data.status === 'active'}
+                                            onChange={(e) => setData('status', e.target.checked ? 'active' : 'inactive')}
                                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
                                         <span className="ml-2 text-sm text-gray-700">Active Account</span>

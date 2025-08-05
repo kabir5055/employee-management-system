@@ -13,6 +13,9 @@ use App\Http\Controllers\Admin\UserPermissionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductUnitController;
+use App\Http\Controllers\ProductAdjustmentController;
 use App\Http\Controllers\ProductDeliveryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
@@ -92,6 +95,19 @@ Route::middleware('auth')->group(function () {
     Route::resource('products', ProductController::class);
     Route::post('products/{product}/update-stock', [ProductController::class, 'updateStock'])
         ->name('products.update-stock');
+
+    // Product Category Routes
+    Route::resource('product-categories', ProductCategoryController::class);
+
+    // Product Unit Routes
+    Route::resource('product-units', ProductUnitController::class);
+
+    // Product Adjustment Routes
+    Route::resource('product-adjustments', ProductAdjustmentController::class);
+    Route::post('product-adjustments/{productAdjustment}/approve', [ProductAdjustmentController::class, 'approve'])
+        ->name('product-adjustments.approve');
+    Route::post('product-adjustments/{productAdjustment}/reject', [ProductAdjustmentController::class, 'reject'])
+        ->name('product-adjustments.reject');
 
     // Product Delivery Routes
     Route::resource('product-deliveries', ProductDeliveryController::class);

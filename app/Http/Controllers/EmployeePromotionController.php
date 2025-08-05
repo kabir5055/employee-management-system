@@ -9,6 +9,7 @@ use App\Models\Department;
 use App\Models\EmployeePromotionHistory;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class EmployeePromotionController extends Controller
 {
@@ -114,8 +115,7 @@ class EmployeePromotionController extends Controller
                 'promotion_type' => $request->promotion_type,
                 'effective_date' => $request->effective_date,
                 'reason' => $request->reason,
-                'notes' => $request->notes,
-                'approved_by' => auth()->id(),
+                'approved_by' => Auth::id(),
                 'approved_at' => now()
             ]);
 

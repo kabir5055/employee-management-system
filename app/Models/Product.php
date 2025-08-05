@@ -11,30 +11,47 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'category_id',
+        'unit_id',
         'description',
-        'price',
         'cost_price',
-        'stock_quantity',
+        'tp_price',
+        'mrp_price',
         'sku',
         'status',
         'commission_rate',
         'minimum_quantity',
         'maximum_quantity',
-        'image_path'
+        'images',
+        'primary_image'
+    ];
+
+    protected $casts = [
+        'images' => 'array',
+        'cost_price' => 'decimal:2',
+        'tp_price' => 'decimal:2',
+        'mrp_price' => 'decimal:2',
+        'commission_rate' => 'decimal:2',
+        'minimum_quantity' => 'integer',
+        'maximum_quantity' => 'integer'
     ];
 
     protected $attributes = [
-        'stock_quantity' => 0,
         'minimum_quantity' => 10,
         'maximum_quantity' => 100,
         'commission_rate' => 0,
     ];
 
-    protected $casts = [
-        'price' => 'decimal:2',
-        'cost_price' => 'decimal:2',
-        'commission_rate' => 'decimal:2',
-    ];
+    // Relationships
+    public function category()
+    {
+        return $this->belongsTo(ProductCategory::class, 'category_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(ProductUnit::class, 'unit_id');
+    }
 
     public function deliveries()
     {
@@ -44,6 +61,11 @@ class Product extends Model
     public function stockAdjustments()
     {
         return $this->hasMany(StockAdjustment::class);
+    }
+
+    public function adjustments()
+    {
+        return $this->hasMany(ProductAdjustment::class);
     }
 
     public function successfulDeliveries()
@@ -86,6 +108,44 @@ class Product extends Model
             return 'overstock';
         }
         return 'normal';
+    }
+
+    // Image handling methods
+    public function getPrimaryImageUrlAttribute()
+    {
+        if ($this->primary_image) {
+            return asset('storage/' . $this->primary_image);
+        }
+        return $this->getFirstImageUrl();
+    }
+
+    public function getFirstImageUrl()
+    {
+        if ($this->images && is_array($this->images) && count($this->images) > 0) {
+            return asset('storage/' . $this->images[0]);
+        }
+        return asset('images/no-image.svg'); // Default placeholder
+    }
+
+    public function getAllImageUrls()
+    {
+        if (!$this->images || !is_array($this->images)) {
+            return [asset('images/no-image.svg')];
+        }
+
+        return array_map(function($image) {
+            return asset('storage/' . $image);
+        }, $this->images);
+    }
+
+    public function hasImages()
+    {
+        return $this->images && is_array($this->images) && count($this->images) > 0;
+    }
+
+    public function getImageCount()
+    {
+        return $this->images ? count($this->images) : 0;
     }
 
     public function getPerformanceMetricsAttribute()

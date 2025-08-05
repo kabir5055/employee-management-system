@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('positions', function (Blueprint $table) {
+        if (!Schema::hasTable('positions')) {
+            Schema::create('positions', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
@@ -23,7 +24,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['name', 'is_active']);
-        });
+            });
+        }
     }
 
     /**

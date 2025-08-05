@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Pagination from '@/Components/Pagination';
-import StockAdjustmentModal from '@/Components/StockAdjustmentModal';
-import { PlusIcon, PencilIcon, TrashIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, PhotoIcon } from '@heroicons/react/24/outline';
 
 export default function Index({ auth, products }) {
-    const [selectedProduct, setSelectedProduct] = useState(null);
     const { delete: destroy } = useForm();
 
     const formatCurrency = (amount) => {
@@ -22,20 +20,20 @@ export default function Index({ auth, products }) {
         }
     };
 
-    const openStockAdjustment = (product) => {
-        setSelectedProduct(product);
-    };
-
-    const getStockStatusColor = (quantity) => {
-        if (quantity < 10) return 'text-red-600';
-        if (quantity < 20) return 'text-yellow-600';
-        return 'text-green-600';
-    };
-
     const getStatusBadgeClass = (status) => {
         return status === 'active'
             ? 'bg-green-100 text-green-800'
             : 'bg-red-100 text-red-800';
+    };
+
+    const getProductImage = (product) => {
+        if (product.primary_image) {
+            return `/storage/${product.primary_image}`;
+        }
+        if (product.images && product.images.length > 0) {
+            return `/storage/${product.images[0]}`;
+        }
+        return '/images/no-image.svg';
     };
 
     return (
@@ -64,11 +62,14 @@ export default function Index({ auth, products }) {
                                 <table className="min-w-full bg-white border border-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
+                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
                                             <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
                                             <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                                             <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Price</th>
-                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TP Price</th>
+                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MRP Price</th>
+                                            <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
                                             <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                             <th className="py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                         </tr>
@@ -76,20 +77,42 @@ export default function Index({ auth, products }) {
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {products.data.map((product) => (
                                             <tr key={product.id} className="hover:bg-gray-50">
+                                                <td className="py-3 px-4 border-b">
+                                                    <img
+                                                        src={getProductImage(product)}
+                                                        alt={product.name}
+                                                        className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                                                        onError={(e) => {
+                                                            e.target.src = '/images/no-image.svg';
+                                                        }}
+                                                    />
+                                                </td>
                                                 <td className="py-3 px-4 border-b text-sm font-medium text-gray-900">
                                                     {product.sku}
                                                 </td>
                                                 <td className="py-3 px-4 border-b text-sm text-gray-900">
-                                                    {product.name}
+                                                    <div>
+                                                        <div className="font-medium">{product.name}</div>
+                                                        <div className="text-xs text-gray-500">{product.unit?.name}</div>
+                                                    </div>
                                                 </td>
                                                 <td className="py-3 px-4 border-b text-sm text-gray-900">
-                                                    {formatCurrency(product.price)}
+                                                    {product.category?.name || 'No Category'}
                                                 </td>
                                                 <td className="py-3 px-4 border-b text-sm text-gray-900">
-                                                    {formatCurrency(product.cost_price)}
+                                                    {product.cost_price ? formatCurrency(product.cost_price) : '-'}
                                                 </td>
-                                                <td className={`py-3 px-4 border-b text-sm font-medium ${getStockStatusColor(product.stock_quantity)}`}>
-                                                    {product.stock_quantity}
+                                                <td className="py-3 px-4 border-b text-sm text-gray-900">
+                                                    {product.tp_price ? formatCurrency(product.tp_price) : '-'}
+                                                </td>
+                                                <td className="py-3 px-4 border-b text-sm text-gray-900">
+                                                    {product.mrp_price ? formatCurrency(product.mrp_price) : '-'}
+                                                </td>
+                                                <td className="py-3 px-4 border-b text-sm text-gray-900">
+                                                    <div className="flex items-center">
+                                                        <PhotoIcon className="w-4 h-4 mr-1 text-gray-400" />
+                                                        <span>{product.images ? product.images.length : 0}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="py-3 px-4 border-b">
                                                     <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(product.status)}`}>
@@ -112,13 +135,6 @@ export default function Index({ auth, products }) {
                                                             <TrashIcon className="w-4 h-4 mr-1" />
                                                             Delete
                                                         </button>
-                                                        <button
-                                                            onClick={() => openStockAdjustment(product)}
-                                                            className="text-green-600 hover:text-green-900 inline-flex items-center"
-                                                        >
-                                                            <AdjustmentsHorizontalIcon className="w-4 h-4 mr-1" />
-                                                            Adjust Stock
-                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -132,12 +148,6 @@ export default function Index({ auth, products }) {
                     </div>
                 </div>
             </div>
-
-            <StockAdjustmentModal
-                show={!!selectedProduct}
-                product={selectedProduct}
-                onClose={() => setSelectedProduct(null)}
-            />
         </AuthenticatedLayout>
     );
 }

@@ -42,6 +42,20 @@ window.route = function(name, params = {}) {
         'products.update': '/products/{product}',
         'products.destroy': '/products/{product}',
         'products.update-stock': '/products/{product}/update-stock',
+        'product-categories.index': '/product-categories',
+        'product-categories.create': '/product-categories/create',
+        'product-categories.show': '/product-categories/{product_category}',
+        'product-categories.edit': '/product-categories/{product_category}/edit',
+        'product-categories.store': '/product-categories',
+        'product-categories.update': '/product-categories/{product_category}',
+        'product-categories.destroy': '/product-categories/{product_category}',
+        'product-units.index': '/product-units',
+        'product-units.create': '/product-units/create',
+        'product-units.show': '/product-units/{product_unit}',
+        'product-units.edit': '/product-units/{product_unit}/edit',
+        'product-units.store': '/product-units',
+        'product-units.update': '/product-units/{product_unit}',
+        'product-units.destroy': '/product-units/{product_unit}',
         'product-deliveries.index': '/product-deliveries',
         'product-deliveries.create': '/product-deliveries/create',
         'product-deliveries.show': '/product-deliveries/{product_delivery}',
@@ -49,6 +63,15 @@ window.route = function(name, params = {}) {
         'product-deliveries.store': '/product-deliveries',
         'product-deliveries.update': '/product-deliveries/{product_delivery}',
         'product-deliveries.destroy': '/product-deliveries/{product_delivery}',
+        'product-adjustments.index': '/product-adjustments',
+        'product-adjustments.create': '/product-adjustments/create',
+        'product-adjustments.show': '/product-adjustments/{product_adjustment}',
+        'product-adjustments.edit': '/product-adjustments/{product_adjustment}/edit',
+        'product-adjustments.store': '/product-adjustments',
+        'product-adjustments.update': '/product-adjustments/{product_adjustment}',
+        'product-adjustments.destroy': '/product-adjustments/{product_adjustment}',
+        'product-adjustments.approve': '/product-adjustments/{product_adjustment}/approve',
+        'product-adjustments.reject': '/product-adjustments/{product_adjustment}/reject',
         'warehouses.index': '/warehouses',
         'warehouses.create': '/warehouses/create',
         'warehouses.show': '/warehouses/{warehouse}',
@@ -172,6 +195,9 @@ window.route.current = function(routeName) {
         'dashboard': '/dashboard',
         'employees.index': '/employees',
         'products.index': '/products',
+        'product-categories.index': '/product-categories',
+        'product-units.index': '/product-units',
+        'product-adjustments.index': '/product-adjustments',
         'product-deliveries.index': '/product-deliveries',
         'balance-sheets.index': '/balance-sheets',
         'warehouses.index': '/warehouses',
@@ -201,6 +227,18 @@ window.route.current = function(routeName) {
 
     if (routeName === 'products.*') {
         return currentPath.startsWith('/products');
+    }
+
+    if (routeName === 'product-categories.*') {
+        return currentPath.startsWith('/product-categories');
+    }
+
+    if (routeName === 'product-units.*') {
+        return currentPath.startsWith('/product-units');
+    }
+
+    if (routeName === 'product-adjustments.*') {
+        return currentPath.startsWith('/product-adjustments');
     }
 
     if (routeName === 'product-deliveries.*') {

@@ -20,7 +20,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password', 'employee_id', 'phone', 'address',
         'date_of_birth', 'joining_date', 'leaving_date', 'department_id',
-        'position_id', 'status', 'nid_number', 'current_salary',
+        'position_id', 'status', 'nid_number', 'current_salary', 'salary',
         'profile_photo_path', 'district_id', 'upazila_id', 'thana_id',
         'designation', 'employee_code', 'is_super_admin', 'image_path',
         'nid', 'employment_status'
@@ -86,6 +86,18 @@ class User extends Authenticatable
 
         $name = urlencode($this->name);
         return "https://ui-avatars.com/api/?name={$name}&color=7F9CF5&background=EBF4FF";
+    }
+
+    // Accessor for salary to map to current_salary
+    public function getSalaryAttribute()
+    {
+        return $this->current_salary;
+    }
+
+    // Mutator for salary to map to current_salary
+    public function setSalaryAttribute($value)
+    {
+        $this->attributes['current_salary'] = $value;
     }
 
     public function salaryStructures()

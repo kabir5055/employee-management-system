@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Avatar from '@/Components/Avatar';
 import { showToast } from '@/utils/toast.jsx';
 import {
     MagnifyingGlassIcon,
@@ -50,7 +51,7 @@ export default function Index({ users, filters }) {
     };
 
     const handleToggleStatus = (user) => {
-        const action = user.is_active ? 'deactivate' : 'activate';
+        const action = user.status === 'active' ? 'deactivate' : 'activate';
         const loadingToast = showToast.loading(`${action === 'activate' ? 'Activating' : 'Deactivating'} user...`);
 
         router.patch(route('admin.users.toggle-status', { user: user.id }), {}, {
@@ -166,10 +167,12 @@ export default function Index({ users, filters }) {
                                             <tr key={user.id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
-                                                        <div className="flex-shrink-0 h-10 w-10">
-                                                            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                                                <UserIcon className="h-6 w-6 text-indigo-600" />
-                                                            </div>
+                                                        <div className="flex-shrink-0">
+                                                            <Avatar
+                                                                user={user}
+                                                                size="md"
+                                                                fallbackType="initials"
+                                                            />
                                                         </div>
                                                         <div className="ml-4">
                                                             <div className="text-sm font-medium text-gray-900">
@@ -194,14 +197,14 @@ export default function Index({ users, filters }) {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <button
-                                                        onClick={() => toggleStatus(user)}
+                                                        onClick={() => handleToggleStatus(user)}
                                                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                            user.is_active
+                                                            user.status === 'active'
                                                                 ? 'bg-green-100 text-green-800 hover:bg-green-200'
                                                                 : 'bg-red-100 text-red-800 hover:bg-red-200'
                                                         }`}
                                                     >
-                                                        {user.is_active ? (
+                                                        {user.status === 'active' ? (
                                                             <>
                                                                 <CheckIcon className="w-3 h-3 mr-1" />
                                                                 Active
@@ -215,7 +218,7 @@ export default function Index({ users, filters }) {
                                                     </button>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {user.hire_date ? new Date(user.hire_date).toLocaleDateString() : '-'}
+                                                    {user.joining_date ? new Date(user.joining_date).toLocaleDateString() : '-'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex items-center justify-end gap-2">

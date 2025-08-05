@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::paginate(10);
+        $products = Product::with(['category', 'unit'])->paginate(10);
         return Inertia::render('Products/Index', [
             'products' => $products
         ]);
@@ -19,28 +19,54 @@ class ProductController extends Controller
 
     public function create()
     {
-        return Inertia::render('Products/Create');
-    }
+        $categories = \App\Models\ProductCategory::active()->ordered()->get(['id', 'name']);
+        $units = \App\Models\ProductUnit::active()->ordered()->get(['id', 'name', 'short_name']);
 
-    public function store(Request $request)
+        return Inertia::render('Products/Create', [
+            'categories' => $categories,
+            'units' => $units
+        ]);
+    }    public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'category_id' => 'nullable|exists:product_categories,id',
+            'unit_id' => 'nullable|exists:product_units,id',
             'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'cost_price' => 'required|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'tp_price' => 'nullable|numeric|min:0',
+            'mrp_price' => 'nullable|numeric|min:0',
             'sku' => 'required|string|unique:products',
             'status' => 'required|in:active,inactive',
-            'image' => 'nullable|image|max:2048', // 2MB max
+            'images' => 'nullable|array|max:5', // Max 5 images
+            'images.*' => 'image|max:2048', // Each image max 2MB
+            'primary_image_index' => 'nullable|integer|min:0', // Index of primary image
         ]);
 
         try {
-            // Handle image upload
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('products', 'public');
-                $validated['image_path'] = $imagePath;
+            $imagePaths = [];
+            $primaryImage = null;
+
+            // Handle multiple image uploads
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('products', 'public');
+                    $imagePaths[] = $imagePath;
+
+                    // Set primary image based on index or first image
+                    if ($index === (int)$request->input('primary_image_index', 0)) {
+                        $primaryImage = $imagePath;
+                    }
+                }
+
+                // If no primary image set, use first image
+                if (!$primaryImage && !empty($imagePaths)) {
+                    $primaryImage = $imagePaths[0];
+                }
             }
+
+            $validated['images'] = $imagePaths;
+            $validated['primary_image'] = $primaryImage;
 
             Product::create($validated);
 
@@ -61,36 +87,75 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        return Inertia::render('Products/Edit', [
-            'product' => $product
-        ]);
-    }
+        $categories = \App\Models\ProductCategory::active()->ordered()->get(['id', 'name']);
+        $units = \App\Models\ProductUnit::active()->ordered()->get(['id', 'name', 'short_name']);
 
-    public function update(Request $request, Product $product)
+        return Inertia::render('Products/Edit', [
+            'product' => $product,
+            'categories' => $categories,
+            'units' => $units
+        ]);
+    }    public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'category_id' => 'nullable|exists:product_categories,id',
+            'unit_id' => 'nullable|exists:product_units,id',
             'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'cost_price' => 'required|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'tp_price' => 'nullable|numeric|min:0',
+            'mrp_price' => 'nullable|numeric|min:0',
             'sku' => 'required|string|unique:products,sku,' . $product->id,
             'status' => 'required|in:active,inactive',
-            'image' => 'nullable|image|max:2048', // 2MB max
+            'images' => 'nullable|array|max:5', // Max 5 images
+            'images.*' => 'image|max:2048', // Each image max 2MB
+            'primary_image_index' => 'nullable|integer|min:0', // Index of primary image
+            'remove_images' => 'nullable|array', // Array of image paths to remove
+            'keep_existing' => 'nullable|boolean', // Whether to keep existing images
         ]);
 
         try {
-            // Handle image upload
-            if ($request->hasFile('image')) {
-                // Delete old image if exists
-                if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                    Storage::disk('public')->delete($product->image_path);
-                }
+            $imagePaths = $product->images ?? [];
+            $primaryImage = $product->primary_image;
 
-                // Store new image
-                $imagePath = $request->file('image')->store('products', 'public');
-                $validated['image_path'] = $imagePath;
+            // Remove specified images
+            if ($request->has('remove_images') && is_array($request->remove_images)) {
+                foreach ($request->remove_images as $removeImage) {
+                    if (Storage::disk('public')->exists($removeImage)) {
+                        Storage::disk('public')->delete($removeImage);
+                    }
+                    $imagePaths = array_filter($imagePaths, fn($img) => $img !== $removeImage);
+
+                    // Reset primary image if it was removed
+                    if ($primaryImage === $removeImage) {
+                        $primaryImage = null;
+                    }
+                }
+                $imagePaths = array_values($imagePaths); // Re-index array
             }
+
+            // Handle new image uploads
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $imagePath = $image->store('products', 'public');
+                    $imagePaths[] = $imagePath;
+
+                    // Set primary image based on total images + new index
+                    $totalIndex = count($imagePaths) - 1;
+                    if ($request->has('primary_image_index') &&
+                        (int)$request->input('primary_image_index') === $totalIndex) {
+                        $primaryImage = $imagePath;
+                    }
+                }
+            }
+
+            // Set primary image if not set and images exist
+            if (!$primaryImage && !empty($imagePaths)) {
+                $primaryImage = $imagePaths[0];
+            }
+
+            $validated['images'] = $imagePaths;
+            $validated['primary_image'] = $primaryImage;
 
             $product->update($validated);
 
@@ -105,9 +170,20 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         try {
-            // Delete image if exists
-            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                Storage::disk('public')->delete($product->image_path);
+            // Delete all images if they exist
+            if ($product->images && is_array($product->images)) {
+                foreach ($product->images as $imagePath) {
+                    if (Storage::disk('public')->exists($imagePath)) {
+                        Storage::disk('public')->delete($imagePath);
+                    }
+                }
+            }
+
+            // Delete primary image if it exists and not in images array
+            if ($product->primary_image &&
+                Storage::disk('public')->exists($product->primary_image) &&
+                (!$product->images || !in_array($product->primary_image, $product->images))) {
+                Storage::disk('public')->delete($product->primary_image);
             }
 
             $product->delete();

@@ -11,6 +11,21 @@ export default function Edit({ user, departments, positions }) {
     const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
     const [imageError, setImageError] = useState(null);
 
+    // Helper function to format date for HTML input
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        // Convert ISO date to YYYY-MM-DD format
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+    };
+
+    // Helper function to format salary for input
+    const formatSalaryForInput = (salary) => {
+        if (!salary) return '';
+        // Convert to string and remove any decimal places for display
+        return String(salary).replace(/\.00$/, '');
+    };
+
     const { data, setData, post, processing } = useForm({
         _method: 'PATCH',
         name: user.name || '',
@@ -20,11 +35,11 @@ export default function Edit({ user, departments, positions }) {
         employee_id: user.employee_id || '',
         phone: user.phone || '',
         address: user.address || '',
-        hire_date: user.hire_date || '',
-        salary: user.salary || '',
+        joining_date: formatDateForInput(user.joining_date),
+        salary: formatSalaryForInput(user.salary || user.current_salary),
         department_id: user.department_id || '',
         position_id: user.position_id || '',
-        is_active: user.is_active || false,
+        status: user.status || 'active',
         is_super_admin: user.is_super_admin || false,
         image: null
     });
@@ -244,32 +259,36 @@ export default function Edit({ user, departments, positions }) {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="hire_date" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Hire Date
+                                    <label htmlFor="joining_date" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Joining Date
                                     </label>
                                     <input
                                         type="date"
-                                        id="hire_date"
-                                        value={data.hire_date}
-                                        onChange={(e) => setData('hire_date', e.target.value)}
+                                        id="joining_date"
+                                        value={data.joining_date}
+                                        onChange={(e) => setData('joining_date', e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                                     />
-                                    {errors.hire_date && <p className="mt-1 text-sm text-red-600">{errors.hire_date}</p>}
+                                    {errors.joining_date && <p className="mt-1 text-sm text-red-600">{errors.joining_date}</p>}
                                 </div>
 
                                 <div>
                                     <label htmlFor="salary" className="block text-sm font-medium text-gray-700 mb-2">
-                                        Salary
+                                        Salary (BDT)
                                     </label>
-                                    <input
-                                        type="number"
-                                        id="salary"
-                                        value={data.salary}
-                                        onChange={(e) => setData('salary', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                        min="0"
-                                        step="0.01"
-                                    />
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">৳</span>
+                                        <input
+                                            type="number"
+                                            id="salary"
+                                            value={data.salary}
+                                            onChange={(e) => setData('salary', e.target.value)}
+                                            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="Enter salary amount"
+                                        />
+                                    </div>
                                     {errors.salary && <p className="mt-1 text-sm text-red-600">{errors.salary}</p>}
                                 </div>
 
@@ -296,8 +315,8 @@ export default function Edit({ user, departments, positions }) {
                                     <label className="flex items-center">
                                         <input
                                             type="checkbox"
-                                            checked={data.is_active}
-                                            onChange={(e) => setData('is_active', e.target.checked)}
+                                            checked={data.status === 'active'}
+                                            onChange={(e) => setData('status', e.target.checked ? 'active' : 'inactive')}
                                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
                                         <span className="ml-2 text-sm text-gray-700">Active Account</span>

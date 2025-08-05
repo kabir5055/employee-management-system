@@ -46,8 +46,7 @@ class UserController extends Controller
 
         // Apply status filter
         if ($request->filled('status')) {
-            $isActive = $request->input('status') === 'active';
-            $query->where('is_active', $isActive);
+            $query->where('status', $request->input('status'));
         }
 
         $users = $query->orderBy('created_at', 'desc')
@@ -86,11 +85,11 @@ class UserController extends Controller
             'employee_id' => 'nullable|string|max:50|unique:users',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
-            'hire_date' => 'nullable|date',
+            'joining_date' => 'nullable|date',
             'salary' => 'nullable|numeric|min:0',
             'department_id' => 'nullable|exists:departments,id',
             'position_id' => 'nullable|exists:positions,id',
-            'is_active' => 'boolean',
+            'status' => 'in:active,inactive',
             'is_super_admin' => 'boolean',
             'image' => 'nullable|image|max:2048', // 2MB max
         ]);
@@ -103,11 +102,11 @@ class UserController extends Controller
                 'employee_id' => $request->employee_id,
                 'phone' => $request->phone,
                 'address' => $request->address,
-                'hire_date' => $request->hire_date,
+                'joining_date' => $request->joining_date ?: now()->format('Y-m-d'),
                 'salary' => $request->salary,
                 'department_id' => $request->department_id,
                 'position_id' => $request->position_id,
-                'is_active' => $request->boolean('is_active', true),
+                'status' => $request->input('status', 'active'),
                 'is_super_admin' => $request->boolean('is_super_admin', false),
             ];
 
@@ -184,11 +183,11 @@ class UserController extends Controller
             'employee_id' => 'nullable|string|max:50|unique:users,employee_id,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
-            'hire_date' => 'nullable|date',
+            'joining_date' => 'nullable|date',
             'salary' => 'nullable|numeric|min:0',
             'department_id' => 'nullable|exists:departments,id',
             'position_id' => 'nullable|exists:positions,id',
-            'is_active' => 'boolean',
+            'status' => 'in:active,inactive',
             'is_super_admin' => 'boolean',
             'image' => 'nullable|image|max:2048', // 2MB max
         ]);
@@ -200,13 +199,17 @@ class UserController extends Controller
                 'employee_id' => $request->employee_id,
                 'phone' => $request->phone,
                 'address' => $request->address,
-                'hire_date' => $request->hire_date,
                 'salary' => $request->salary,
                 'department_id' => $request->department_id,
                 'position_id' => $request->position_id,
-                'is_active' => $request->boolean('is_active'),
+                'status' => $request->input('status'),
                 'is_super_admin' => $request->boolean('is_super_admin'),
             ];
+
+            // Only update joining_date if provided
+            if ($request->filled('joining_date')) {
+                $updateData['joining_date'] = $request->joining_date;
+            }
 
             // Handle password update
             if ($request->filled('password')) {
@@ -330,9 +333,10 @@ class UserController extends Controller
         }
 
         try {
-            $user->update(['is_active' => !$user->is_active]);
+            $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+            $user->update(['status' => $newStatus]);
 
-            $status = $user->is_active ? 'activated' : 'deactivated';
+            $status = $newStatus === 'active' ? 'activated' : 'deactivated';
             return back()->with('success', "User {$status} successfully.");
         } catch (\Exception $e) {
             return back()->with('error', 'Error updating user status: ' . $e->getMessage());

@@ -17,6 +17,9 @@ class DatabaseSeeder extends Seeder
             // Users seeder with super admin creation
             UserSeeder::class,
 
+            // Employee seeder for separate employees table
+            EmployeeSeeder::class,
+
             // Balance sheets for users
             BalanceSheetSeeder::class,
 
@@ -30,6 +33,18 @@ class DatabaseSeeder extends Seeder
             SalaryPaymentSeeder::class,
             EmployeeHistorySeeder::class,
             SettingsSeeder::class,
+
+            // HR Management
+            LeaveSeeder::class,
+
+            // Warehouse and inventory management
+            WarehouseSeeder::class,
+            EmployeeStockSeeder::class,
+            StockTransferSeeder::class,
+            StockAdjustmentSeeder::class,
+
+            // Employee career progression
+            EmployeePromotionHistorySeeder::class,
         ]);
     }
 }
